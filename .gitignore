@@ -1,0 +1,44 @@
+# Dependencies
+**/node_modules
+/.pnp
+.pnp.js
+
+# Build outputs
+**/dist
+**/dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# Editor / OS
+.DS_Store
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+/coverage
+
+# Uploaded files / runtime data (future)
+/backend/uploads
+/backend/temp
+
+# Spec/planning documents (do not publish)
+BSI_ProcurementSystem_SpecPrompt.md
+BSI_Implementation_Phasing_Instructions.md
