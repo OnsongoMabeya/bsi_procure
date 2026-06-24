@@ -143,6 +143,53 @@ This file records what was built in each phase, what decisions were made, and wh
 
 ---
 
+## Phase 3 — Tender Intake & Feasibility ✅
+**Date completed:** 2026-06-24
+
+### What was built
+
+#### Backend
+- **`backend/models/Tender.js`** — Sequelize model: `id`, `name`, `reference_number`, `procuring_entity`, `deadline`, `submission_type` (ENUM: physical/digital/both), `status` (ENUM: PENDING_FEASIBILITY/DOCUMENT_GATHERING/ASSEMBLY/SUBMITTED/REJECTED), `uploaded_document_path`, `uploaded_document_name`, `uploaded_by`, `feasibility_approved_by`, `feasibility_approved_at`, `feasibility_notes`, `rejection_reason`, `is_archived`
+- **`backend/middleware/upload.js`** — `multer` disk storage for PDF/DOCX, max 50 MB, sanitised filename, stored in `backend/uploads/tenders/`
+- **`backend/routes/tenders.js`**
+  - `GET /api/tenders` — list all non-archived tenders (all authenticated roles)
+  - `GET /api/tenders/:id` — single tender with creator + approver associations
+  - `POST /api/tenders` — create tender with optional file upload (GM, HOT, CEO, ADMIN)
+  - `PATCH /api/tenders/:id/feasibility` — approve or reject (GM, HOT only); approve → `DOCUMENT_GATHERING`, reject → `REJECTED` with mandatory reason
+- **`backend/index.js`** — registered tenders route, Sequelize associations (User → Tender), static `/uploads` serving
+- **`backend/scripts/setup.js`** — Tender model imported so `tenders` table is created on setup
+
+#### Frontend
+- **`frontend/src/pages/TendersPage.jsx`** — full replacement of placeholder:
+  - Tender cards grid (name, entity, ref, status badge, deadline countdown, submission type, created by)
+  - Countdown turns red and bold when < 3 days remaining
+  - "+ New Tender" button (GM, HOT, CEO, ADMIN only)
+  - Inline create form with: name, reference number, procuring entity, deadline (datetime-local), submission type, document upload
+  - Links to `/tenders/:id` on card click
+- **`frontend/src/pages/TenderDetailPage.jsx`** — NEW:
+  - Header card: full tender metadata grid
+  - Uploaded document link (opens in new tab)
+  - Feasibility panel:
+    - `PENDING_FEASIBILITY` → shows waiting message
+    - `DOCUMENT_GATHERING/ASSEMBLY/SUBMITTED` → shows approved box (approver name, date, notes)
+    - `REJECTED` → shows rejected box (approver name, date, reason)
+    - GM/HOT with pending tender → shows Approve/Reject toggle form with notes textarea
+- **`frontend/src/App.jsx`** — added `/tenders/:id` route (all roles)
+
+### Decisions made
+- **CEO can create tenders** — spec says "GM, CEO, or HOT can upload". Implemented as stated. CEO view is still read-only for feasibility (cannot approve/reject).
+- **`multer` disk storage** chosen over memory storage — tender documents can be large PDFs; disk is safer for 50 MB limit
+- **Uploaded document URL** served via `express.static('/uploads')` — simple and sufficient for on-premise deployment; no cloud storage needed
+- `is_archived` defaults to `false` — archived tenders hidden from list by default; archive management deferred to Phase 13
+
+### Intentionally stubbed
+- WhatsApp notification to GM/HOT on tender creation → Phase 12
+- AI checklist extraction trigger on feasibility approval → Phase 4
+- In-app notification bell → Phase 12
+- Checklist panel on tender detail → Phase 4/5
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts

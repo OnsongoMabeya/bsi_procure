@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import MyTasksPage from './pages/MyTasksPage';
 import TendersPage from './pages/TendersPage';
+import TenderDetailPage from './pages/TenderDetailPage';
 import DocumentLibraryPage from './pages/DocumentLibraryPage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import CompanyDocumentsPage from './pages/CompanyDocumentsPage';
@@ -29,6 +30,9 @@ export default function App() {
           } />
           <Route path="/tenders" element={
             <ProtectedRoute roles={ALL_ROLES}><TendersPage /></ProtectedRoute>
+          } />
+          <Route path="/tenders/:id" element={
+            <ProtectedRoute roles={ALL_ROLES}><TenderDetailPage /></ProtectedRoute>
           } />
           <Route path="/documents" element={
             <ProtectedRoute roles={['GM','FL','TECH','INFO','IT','HOT','ADMIN']}><DocumentLibraryPage /></ProtectedRoute>

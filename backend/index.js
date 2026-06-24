@@ -6,7 +6,13 @@ import dotenv from 'dotenv';
 import sequelize from './config/database.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
-import './models/User.js';
+import tenderRoutes from './routes/tenders.js';
+import User from './models/User.js';
+import Tender from './models/Tender.js';
+
+User.hasMany(Tender, { foreignKey: 'uploaded_by', as: 'createdTenders' });
+Tender.belongsTo(User, { foreignKey: 'uploaded_by', as: 'creator' });
+Tender.belongsTo(User, { foreignKey: 'feasibility_approved_by', as: 'approver' });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -29,6 +35,8 @@ app.get('/api/health', async (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/tenders', tenderRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 sequelize.sync({ alter: true })
   .then(() => console.log('Database synced'))

@@ -66,6 +66,7 @@ async function syncModels() {
 
   const { default: sequelize } = await import('../config/database.js');
   await import('../models/User.js');
+  await import('../models/Tender.js');
 
   await sequelize.sync({ alter: true });
 
