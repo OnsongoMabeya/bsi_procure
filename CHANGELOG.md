@@ -277,19 +277,22 @@ docker compose exec backend npm run setup
 
 ---
 
-## Upcoming
+## Phase Status Summary
 
-| Phase | Name                                 | What it will deliver                                             |
-| ----- | ------------------------------------ | ---------------------------------------------------------------- |
-| 3.    | Tender Intake & Feasibility          | `tenders` table, file upload, GM/HOT feasibility approval flow   |
-| 4.    | AI Checklist Extraction              | Gemini integration, checklist saved to DB, FL/INFO review/edit   |
-| 5.    | Document Gathering & My Tasks        | Checklist item statuses, per-item upload, My Tasks view          |
-| 6.    | Company Documents & Profile          | Stamp/signature/cert library, BSI profile seed data              |
-| 7.    | Form Filling Engine                  | Overlay editor, auto-fill from profile, flattened PDF output     |
-| 8.    | Signatures & Stamps                  | Drag-and-place assets, flatten + immutable audit log             |
-| 9.    | Document Assembly & Ordering         | Drag-and-drop reorder, auto Table of Contents                    |
-| 10.   | Page Serialization                   | 6-digit page stamp, physical-submission toggle                   |
-| 11.   | Final Submission                     | Merge to PDF (physical) or named ZIP (digital), immutable record |
-| 12.   | WhatsApp Alerts                      | Meta Cloud API, escalation cron, in-app notification bell        |
-| 13.   | Past Tenders & Archive               | Searchable archive, full audit log view                          |
-| 14.   | Polish & Hardening                   | Error handling, mobile responsiveness, security review           |
+| Phase | Name                                 | Status       | What it delivered                                                |
+| ----- | ------------------------------------ | ------------ | ---------------------------------------------------------------- |
+| 0     | Scaffolding                          | ✅ Complete  | Monorepo, Express + React + Vite, MySQL, health route            |
+| 1     | Auth & Roles                         | ✅ Complete  | JWT login, 9 roles, RBAC middleware, ADMIN user CRUD             |
+| 2     | Core Layout & Navigation             | ✅ Complete  | Sidebar, topbar, 8 placeholder pages, role-filtered nav          |
+| 3     | Tender Intake & Feasibility          | ✅ Complete  | `tenders` table, file upload, GM/HOT feasibility approval flow   |
+| 4     | AI Checklist Extraction              | ✅ Complete  | Gemini integration, checklist saved to DB, FL/INFO review/edit   |
+| 5     | Document Gathering & My Tasks        | ⏳ Next      | Checklist item statuses, per-item upload, My Tasks view          |
+| 6     | Company Documents & Profile          | ⏳ Pending   | Stamp/signature/cert library, BSI profile seed data              |
+| 7     | Form Filling Engine                  | ⏳ Pending   | Overlay editor, auto-fill from profile, flattened PDF output     |
+| 8     | Signatures & Stamps                  | ⏳ Pending   | Drag-and-place assets, flatten + immutable audit log             |
+| 9     | Document Assembly & Ordering         | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                    |
+| 10    | Page Serialization                   | ⏳ Pending   | 6-digit page stamp, physical-submission toggle                   |
+| 11    | Final Submission                     | ⏳ Pending   | Merge to PDF (physical) or named ZIP (digital), immutable record |
+| 12    | WhatsApp Alerts                      | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell        |
+| 13    | Past Tenders & Archive               | ⏳ Pending   | Searchable archive, full audit log view                          |
+| 14    | Polish & Hardening                   | ⏳ Pending   | Error handling, mobile responsiveness, security review           |
