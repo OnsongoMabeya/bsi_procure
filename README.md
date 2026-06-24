@@ -12,30 +12,24 @@ Monorepo for the BSI tender/procurement management system.
 
 > **Prerequisites:** Node.js ≥ 18, MySQL 8 running locally (user `john`, password configured in `.env`).
 
-1. Create the database (first time only):
-
-   ```bash
-   mysql -u john -p -e "CREATE DATABASE IF NOT EXISTS bsi_procurement CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-   ```
-
-2. Install and run the backend:
+1. Install backend dependencies and run the one-time setup (creates DB, tables, default ADMIN):
 
    ```bash
    cd backend
    npm install
+   npm run setup
+   # Default ADMIN — change password after first login:
+   #   Email:    admin@bsint.net
+   #   Password: Admin@123
+   ```
+
+2. Start the backend:
+
+   ```bash
    npm run dev
    ```
 
-3. Seed the default ADMIN user (first time only):
-
-   ```bash
-   cd backend
-   npm run seed
-   # Email:    admin@bsint.net
-   # Password: Admin@123  ← change after first login
-   ```
-
-4. In a new terminal, install and run the frontend:
+3. In a new terminal, install and run the frontend:
 
    ```bash
    cd frontend
@@ -43,7 +37,9 @@ Monorepo for the BSI tender/procurement management system.
    npm run dev
    ```
 
-5. Open <http://localhost:3005> — you will be redirected to the login page. Backend API runs on port 5005.
+4. Open <http://localhost:3005> — you will be redirected to the login page. Backend API runs on port 5005.
+
+> **Re-running setup is safe** — it skips any steps that are already done (existing DB, existing tables, existing users).
 
 ## Implementation Phases
 
