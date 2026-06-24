@@ -60,6 +60,10 @@ const Tender = sequelize.define('Tender', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  checklist_confirmed: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
   is_archived: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,

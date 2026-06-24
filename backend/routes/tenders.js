@@ -3,6 +3,7 @@ import { authMiddleware, requireRole } from '../middleware/auth.js';
 import { uploadTenderDoc } from '../middleware/upload.js';
 import Tender from '../models/Tender.js';
 import User from '../models/User.js';
+import ChecklistItem from '../models/ChecklistItem.js';
 
 const router = Router();
 
@@ -117,6 +118,82 @@ router.patch('/:id/feasibility', requireRole(...CAN_APPROVE), async (req, res) =
       ],
     });
     res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Get checklist ─────────────────────────────────────────────────────────────
+router.get('/:id/checklist', async (req, res) => {
+  try {
+    const items = await ChecklistItem.findAll({
+      where: { tender_id: req.params.id },
+      include: [{ model: User, as: 'assignee', attributes: ['id', 'name', 'role'] }],
+      order: [['order_index', 'ASC']],
+    });
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Add checklist item manually ───────────────────────────────────────────────
+router.post('/:id/checklist', requireRole('FL', 'INFO', 'ADMIN'), async (req, res) => {
+  const { name, category, is_form, form_reference, notes, suggested_assignee_role, assigned_to } = req.body;
+  if (!name) return res.status(400).json({ error: 'name is required' });
+  try {
+    const count = await ChecklistItem.count({ where: { tender_id: req.params.id } });
+    const item = await ChecklistItem.create({
+      tender_id: req.params.id,
+      name,
+      category: category || 'other',
+      is_form: is_form || false,
+      form_reference: form_reference || null,
+      notes: notes || null,
+      suggested_assignee_role: suggested_assignee_role || null,
+      assigned_to: assigned_to || null,
+      order_index: count,
+    });
+    res.status(201).json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Edit checklist item ───────────────────────────────────────────────────────
+router.patch('/:id/checklist/:itemId', requireRole('FL', 'INFO', 'ADMIN'), async (req, res) => {
+  try {
+    const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id } });
+    if (!item) return res.status(404).json({ error: 'Checklist item not found' });
+    const { name, category, is_form, form_reference, notes, suggested_assignee_role, assigned_to } = req.body;
+    await item.update({ name, category, is_form, form_reference, notes, suggested_assignee_role, assigned_to });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Delete checklist item ─────────────────────────────────────────────────────
+router.delete('/:id/checklist/:itemId', requireRole('FL', 'INFO', 'ADMIN'), async (req, res) => {
+  try {
+    const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id } });
+    if (!item) return res.status(404).json({ error: 'Checklist item not found' });
+    await item.destroy();
+    res.json({ message: 'Item deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Confirm checklist (FL or INFO) ────────────────────────────────────────────
+router.patch('/:id/checklist/confirm', requireRole('FL', 'INFO', 'ADMIN'), async (req, res) => {
+  try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) return res.status(404).json({ error: 'Tender not found' });
+    const count = await ChecklistItem.count({ where: { tender_id: req.params.id } });
+    if (count === 0) return res.status(400).json({ error: 'Cannot confirm an empty checklist' });
+    await tender.update({ checklist_confirmed: true });
+    res.json({ message: 'Checklist confirmed', checklist_confirmed: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

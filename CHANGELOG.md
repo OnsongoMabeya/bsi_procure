@@ -190,6 +190,65 @@ This file records what was built in each phase, what decisions were made, and wh
 
 ---
 
+## Phase 4 — AI Checklist Extraction ✅
+**Date completed:** 2026-06-24
+
+### What was built
+
+#### Backend
+- **`backend/models/ChecklistItem.js`** — Sequelize model: `id`, `tender_id`, `name`, `category` (ENUM), `is_form`, `form_reference`, `notes`, `suggested_assignee_role`, `assigned_to`, `status` (ENUM: PENDING/IN_PROGRESS/UPLOADED/APPROVED/REJECTED), `order_index`
+- **`backend/models/Tender.js`** — added `checklist_confirmed` boolean field
+- **`backend/services/llm.js`** — LLM abstraction service:
+  - Reads `LLM_PROVIDER` env var (default: `gemini`)
+  - Extracts text from PDF via `pdf-parse`, DOCX via `mammoth`
+  - Sends extracted text + extraction prompt to Gemini 2.0 Flash
+  - Parses JSON response, validates `checklist` array
+  - Truncates to 60,000 chars to stay within context window
+- **`backend/routes/ai.js`** — `POST /api/ai/scan-tender/:tenderId` (FL, INFO, ADMIN):
+  - Validates tender status is `DOCUMENT_GATHERING`
+  - Calls `scanTenderDocument`, wipes old checklist items, bulk-inserts new ones
+- **`backend/routes/tenders.js`** — added:
+  - `GET /api/tenders/:id/checklist` — list items with assignee user join
+  - `POST /api/tenders/:id/checklist` — add item manually
+  - `PATCH /api/tenders/:id/checklist/:itemId` — edit item
+  - `DELETE /api/tenders/:id/checklist/:itemId` — remove item
+  - `PATCH /api/tenders/:id/checklist/confirm` — set `checklist_confirmed = true` (FL, INFO, ADMIN)
+- **`backend/index.js`** — registered `ChecklistItem` model, associations, AI route
+
+#### Frontend
+- **`frontend/src/components/ChecklistPanel.jsx`** — full checklist management component:
+  - "✨ Scan with AI" button → calls AI scan endpoint, replaces checklist
+  - Items grouped by category (Tender Forms, Company Standing, Financial, Experience, Technical, IT, Other)
+  - Per-item: name, form tag (FORM badge + reference), notes, assignee name+role, status badge
+  - Inline edit form per item: name, category, assign user (dropdown of all users), suggested role, notes
+  - Add item manually form
+  - Delete button per item (with confirm dialog)
+  - "✔ Confirm Checklist" button → sets `checklist_confirmed`, shows locked banner
+  - All edit actions hidden once confirmed
+- **`frontend/src/pages/TenderDetailPage.jsx`** — ChecklistPanel mounted below feasibility section when tender status is `DOCUMENT_GATHERING`, `ASSEMBLY`, or `SUBMITTED`
+
+### Decisions made
+- **Text extraction** (not native PDF bytes) sent to Gemini — avoids Google File API complexity; works well for native PDFs. Scanned/image PDFs need OCR — deferred to Phase 14.
+- **Gemini 2.0 Flash** as the model — balances speed, cost, and accuracy for procurement documents
+- **60,000 char truncation** — stays within Gemini's context window comfortably for typical tender docs
+- **Scan replaces existing checklist** — with a confirmation dialog, so re-running is safe
+- **Checklist confirmation is a soft lock** — UI hides edit controls; no hard DB constraint so ADMIN can still patch via API if needed
+
+### Intentionally stubbed
+- WhatsApp/in-app notifications to assigned users on confirmation → Phase 12
+- OpenAI / Anthropic / Ollama providers → Phase 14 (abstraction layer in place, just not wired)
+- OCR for scanned PDFs → Phase 14
+
+### Required config
+Add to `backend/.env`:
+```env
+LLM_PROVIDER=gemini
+LLM_API_KEY=your-gemini-api-key-here
+```
+Get a free Gemini API key at <https://aistudio.google.com/apikey>
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import ChecklistPanel from '../components/ChecklistPanel';
 import { useAuth } from '../context/AuthContext';
 
 const CAN_APPROVE = ['GM', 'HOT'];
@@ -258,6 +259,13 @@ export default function TenderDetailPage() {
           </form>
         )}
       </div>
+
+      {['DOCUMENT_GATHERING', 'ASSEMBLY', 'SUBMITTED'].includes(tender.status) && (
+        <ChecklistPanel
+          tender={tender}
+          onTenderUpdate={(updated) => setTender(updated)}
+        />
+      )}
     </Layout>
   );
 }
