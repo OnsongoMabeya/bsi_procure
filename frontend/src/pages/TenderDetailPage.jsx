@@ -130,16 +130,17 @@ export default function TenderDetailPage() {
             <span style={s.metaLabel}>Created at</span>
             <span style={s.metaValue}>{new Date(tender.created_at).toLocaleString()}</span>
           </div>
-          {tender.uploaded_document_name && (
+          {tender.uploaded_document_name && tender.uploaded_document_path && (
             <div style={s.metaItem}>
               <span style={s.metaLabel}>Uploaded Document</span>
               <a
-                style={{ ...s.metaValue, color: 'var(--bsi-accent)', fontWeight: 600 }}
-                href={`/uploads/tenders/${tender.uploaded_document_path?.split(/[\\/]/).pop()}`}
+                style={{ ...s.metaValue, color: 'var(--bsi-accent)', fontWeight: 600, wordBreak: 'break-all' }}
+                href={`/uploads/tenders/${tender.uploaded_document_path.split(/[\\/]/).pop()}`}
                 target="_blank"
                 rel="noreferrer"
+                download={tender.uploaded_document_name}
               >
-                {tender.uploaded_document_name}
+                📎 {tender.uploaded_document_name}
               </a>
             </div>
           )}
