@@ -87,8 +87,8 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 |-------|-------------------------------------|-------------------------------------|
 | 0     | Scaffolding                         | ✅ Complete                         |
 | 1     | Auth & Roles                        | ✅ Complete                         |
-| 2     | Core Layout & Navigation            | ⏳ Next                             |
-| 3     | Tender Intake & Feasibility         | ⏳ Pending                          |
+| 2     | Core Layout & Navigation            | ✅ Complete                         |
+| 3     | Tender Intake & Feasibility         | ⏳ Next                             |
 | 4     | AI Checklist Extraction             | ⏳ Pending                          |
 | 5     | Document Gathering & My Tasks       | ⏳ Pending                          |
 | 6     | Company Documents & Company Profile | ⏳ Pending                          |

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import Layout from '../components/Layout';
 
 const ROLES = ['CEO', 'GM', 'FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN'];
 
@@ -100,9 +101,9 @@ export default function UsersPage() {
   };
 
   return (
+    <Layout title="User Management">
     <div style={styles.page}>
       <div style={styles.header}>
-        <h2 style={styles.heading}>User Management</h2>
         <button style={styles.btnPrimary} onClick={openCreate}>+ New User</button>
       </div>
 
@@ -187,6 +188,7 @@ export default function UsersPage() {
         </table>
       )}
     </div>
+    </Layout>
   );
 }
 
@@ -196,9 +198,8 @@ const ROLE_COLORS = {
 };
 
 const styles = {
-  page: { padding: 24 },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  heading: { margin: 0, color: '#153E90', fontSize: 20, fontWeight: 700 },
+  page: { padding: 0 },
+  header: { display: 'flex', justifyContent: 'flex-end', marginBottom: 20 },
   btnPrimary: { padding: '8px 18px', background: '#153E90', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnSecondary: { padding: '8px 18px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnLink: { background: 'none', border: 'none', color: '#2DA2E5', fontSize: 13, cursor: 'pointer', marginRight: 8, fontWeight: 600 },
