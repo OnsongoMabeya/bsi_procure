@@ -8,12 +8,14 @@ Monorepo for the BSI tender/procurement management system.
 - `/frontend` — React (Vite) SPA
 - `/shared` — Shared constants/types
 
-## Quick start (Phase 0)
+## Quick start
 
-1. Start the database (requires Docker):
+> **Prerequisites:** Node.js ≥ 18, MySQL 8 running locally (user `john`, password configured in `.env`).
+
+1. Create the database (first time only):
 
    ```bash
-   docker compose up -d
+   mysql -u john -p -e "CREATE DATABASE IF NOT EXISTS bsi_procurement CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
    ```
 
 2. Install and run the backend:
@@ -24,7 +26,16 @@ Monorepo for the BSI tender/procurement management system.
    npm run dev
    ```
 
-3. In a new terminal, install and run the frontend:
+3. Seed the default ADMIN user (first time only):
+
+   ```bash
+   cd backend
+   npm run seed
+   # Email:    admin@bsint.net
+   # Password: Admin@123  ← change after first login
+   ```
+
+4. In a new terminal, install and run the frontend:
 
    ```bash
    cd frontend
@@ -32,7 +43,7 @@ Monorepo for the BSI tender/procurement management system.
    npm run dev
    ```
 
-4. Open <http://localhost:3005>. You should see the API health check response. (Backend runs on port 5005.)
+5. Open <http://localhost:3005> — you will be redirected to the login page. Backend API runs on port 5005.
 
 ## Implementation Phases
 
