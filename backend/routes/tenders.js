@@ -122,4 +122,16 @@ router.patch('/:id/feasibility', requireRole(...CAN_APPROVE), async (req, res) =
   }
 });
 
+// ── Archive tender (ADMIN only) ───────────────────────────────────────────────
+router.patch('/:id/archive', requireRole('ADMIN'), async (req, res) => {
+  try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) return res.status(404).json({ error: 'Tender not found' });
+    await tender.update({ is_archived: true });
+    res.json({ message: 'Tender archived' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

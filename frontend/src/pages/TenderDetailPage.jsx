@@ -45,6 +45,7 @@ export default function TenderDetailPage() {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feasError, setFeasError] = useState('');
+  const [archiving, setArchiving] = useState(false);
 
   const fetchTender = async () => {
     try {
@@ -87,6 +88,24 @@ export default function TenderDetailPage() {
     }
   };
 
+  const handleArchive = async () => {
+    if (!window.confirm('Archive this tender? It will be hidden from the active list. This cannot be undone.')) return;
+    setArchiving(true);
+    try {
+      const res = await fetch(`/api/tenders/${id}/archive`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      navigate('/tenders');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   if (loading) return <Layout title="Tender Detail"><p style={s.muted}>Loading…</p></Layout>;
   if (error)   return <Layout title="Tender Detail"><p style={s.error}>{error}</p></Layout>;
   if (!tender) return null;
@@ -97,7 +116,14 @@ export default function TenderDetailPage() {
 
   return (
     <Layout title={tender.name}>
-      <button style={s.backBtn} onClick={() => navigate('/tenders')}>← Back to Tenders</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <button style={s.backBtn} onClick={() => navigate('/tenders')}>← Back to Tenders</button>
+        {user?.role === 'ADMIN' && (
+          <button style={s.btnArchive} onClick={handleArchive} disabled={archiving}>
+            {archiving ? 'Archiving…' : '🗄 Archive Tender'}
+          </button>
+        )}
+      </div>
 
       {/* ── Header card ── */}
       <div style={s.card}>
@@ -265,4 +291,5 @@ const s = {
   error: { color: 'var(--red)', fontSize: 13, marginBottom: 8 },
   formActions: { display: 'flex', justifyContent: 'flex-end' },
   btnSubmit: { padding: '9px 28px', border: 'none', borderRadius: 7, color: '#fff', fontSize: 14, fontWeight: 700 },
+  btnArchive: { padding: '7px 16px', background: '#fff', border: '1.5px solid var(--red)', color: 'var(--red)', borderRadius: 6, fontSize: 13, fontWeight: 600 },
 };
