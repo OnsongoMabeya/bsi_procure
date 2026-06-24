@@ -41,6 +41,44 @@ Monorepo for the BSI tender/procurement management system.
 
 > **Re-running setup is safe** — it skips any steps that are already done (existing DB, existing tables, existing users).
 
+## Docker deployment (recommended for the physical server)
+
+> **Prerequisites:** Docker and Docker Compose installed.
+
+1. Copy and fill in the backend env file:
+
+   ```bash
+   cp backend/.env.example backend/.env
+   # Edit backend/.env — set DB_USER, DB_PASSWORD, DB_ROOT_PASSWORD, JWT_SECRET, etc.
+   ```
+
+2. Build and start all containers (MySQL + backend + frontend):
+
+   ```bash
+   docker compose up --build -d
+   ```
+
+3. Run setup inside the backend container (first time only — creates DB, tables, ADMIN user):
+
+   ```bash
+   docker compose exec backend npm run setup
+   ```
+
+4. Open <http://localhost:3005>
+
+**Useful commands:**
+
+```bash
+docker compose logs -f          # live logs from all containers
+docker compose logs -f backend  # backend logs only
+docker compose down             # stop all containers (data persisted in volume)
+docker compose down -v          # stop + wipe database volume
+docker compose up --build -d    # rebuild after code changes
+```
+
+> **Note:** When running via Docker, `DB_HOST` in `.env` should be `localhost` for local dev (non-Docker).
+> Docker Compose automatically overrides it to `mysql` (the container name) at runtime — you do not need to change your `.env`.
+
 ## Implementation Phases
 
 The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept local-only, not pushed to GitHub).
