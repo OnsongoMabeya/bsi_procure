@@ -1,8 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
+
+const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
 
 const EXTRACTION_PROMPT = `You are a procurement document analyst for Broadcast Solutions International (BSI), a Kenyan broadcast and AV technology company.
 
