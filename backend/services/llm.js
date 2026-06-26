@@ -130,7 +130,7 @@ async function scanWithOllama(prompt) {
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: 'You are a procurement document analyst. Extract all required documents from the tender text. Return ONLY a raw JSON object with a "checklist" array. Each item must have: name, category, is_form, form_reference, notes, suggested_assignee_role. No markdown, no explanation.' },
+        { role: 'system', content: 'You are a procurement document analyst. Extract all required documents/forms from the tender text. Return ONLY a raw JSON object in this exact shape: {"checklist":[{"name":"...","category":"...","is_form":false,"form_reference":null,"notes":"...","suggested_assignee_role":"..."}]}. category must be one of: company_standing, financial, experience, tender_form, technical, it_related, other. suggested_assignee_role must be one of: FL, FIN, TECH, INFO, IT, HOT, ADMIN, or empty. No markdown, no explanation, no text outside the JSON.' },
         { role: 'user', content: prompt },
       ],
       stream: false,
@@ -147,15 +147,52 @@ async function scanWithOllama(prompt) {
   const text = data.message?.content;
   if (!text) throw new Error('Ollama returned empty response');
 
-  return parseLlmJson(text);
+  try {
+    return parseLlmJson(text);
+  } catch (err) {
+    console.error('[Ollama] Raw response that failed parsing:', text.slice(0, 2000));
+    throw err;
+  }
 }
 
 function parseLlmJson(text) {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('LLM did not return valid JSON');
+  // Try to extract JSON from markdown code blocks or raw JSON
+  let jsonText = text;
 
-  const parsed = JSON.parse(jsonMatch[0]);
-  if (!Array.isArray(parsed.checklist)) throw new Error('LLM response missing checklist array');
+  // Strip markdown code fences
+  const codeBlockMatch = text.match(/```(?:json)?\n?([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    jsonText = codeBlockMatch[1].trim();
+  }
 
-  return parsed;
+  // Try to find the first JSON object or array
+  const objMatch = jsonText.match(/\{[\s\S]*\}/);
+  const arrMatch = jsonText.match(/\[[\s\S]*\]/);
+
+  let parsed;
+  if (objMatch) {
+    try {
+      parsed = JSON.parse(objMatch[0]);
+    } catch (err) {
+      // Object parse failed, try array
+      if (arrMatch) parsed = JSON.parse(arrMatch[0]);
+    }
+  } else if (arrMatch) {
+    parsed = JSON.parse(arrMatch[0]);
+  }
+
+  if (!parsed) {
+    throw new Error('LLM did not return valid JSON');
+  }
+
+  // Support both { checklist: [...] } and bare [...]
+  if (Array.isArray(parsed)) {
+    return { checklist: parsed };
+  }
+
+  if (Array.isArray(parsed.checklist)) {
+    return parsed;
+  }
+
+  throw new Error('LLM response missing checklist array');
 }

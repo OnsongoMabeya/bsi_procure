@@ -9,6 +9,32 @@ router.use(authMiddleware);
 
 const CAN_SCAN = ['FL', 'INFO', 'ADMIN'];
 
+const VALID_CATEGORIES = ['company_standing', 'financial', 'experience', 'tender_form', 'technical', 'it_related', 'other'];
+const VALID_ROLES = ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', ''];
+
+function normalizeCategory(value) {
+  if (!value || typeof value !== 'string') return 'other';
+  const lower = value.toLowerCase().replace(/[^a-z_]/g, '_');
+  if (VALID_CATEGORIES.includes(lower)) return lower;
+
+  // Common model mappings
+  if (lower.includes('company') || lower.includes('registration') || lower.includes('standing') || lower.includes('legal')) return 'company_standing';
+  if (lower.includes('financial') || lower.includes('bank') || lower.includes('tax') || lower.includes('insurance')) return 'financial';
+  if (lower.includes('experience') || lower.includes('past') || lower.includes('reference') || lower.includes('performance')) return 'experience';
+  if (lower.includes('tender_form') || lower.includes('form') || lower.includes('bond') || lower.includes('bid') || lower.includes('declaration')) return 'tender_form';
+  if (lower.includes('technical') || lower.includes('specification') || lower.includes('proposal') || lower.includes('method') || lower.includes('engineering')) return 'technical';
+  if (lower.includes('it') || lower.includes('software') || lower.includes('system') || lower.includes('cyber')) return 'it_related';
+
+  return 'other';
+}
+
+function normalizeRole(value) {
+  if (!value || typeof value !== 'string') return '';
+  const upper = value.toUpperCase().trim();
+  if (VALID_ROLES.includes(upper)) return upper;
+  return '';
+}
+
 router.post('/scan-tender/:tenderId', requireRole(...CAN_SCAN), async (req, res) => {
   try {
     const tender = await Tender.findByPk(req.params.tenderId);
@@ -30,11 +56,11 @@ router.post('/scan-tender/:tenderId', requireRole(...CAN_SCAN), async (req, res)
       result.checklist.map((item, idx) => ({
         tender_id: tender.id,
         name: item.name,
-        category: item.category || 'other',
+        category: normalizeCategory(item.category),
         is_form: item.is_form || false,
         form_reference: item.form_reference || null,
         notes: item.notes || null,
-        suggested_assignee_role: item.suggested_assignee_role || null,
+        suggested_assignee_role: normalizeRole(item.suggested_assignee_role),
         status: 'PENDING',
         order_index: idx,
       }))
