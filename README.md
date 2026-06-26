@@ -79,6 +79,33 @@ docker compose up --build -d    # rebuild after code changes
 > **Note:** When running via Docker, `DB_HOST` in `.env` should be `localhost` for local dev (non-Docker).
 > Docker Compose automatically overrides it to `mysql` (the container name) at runtime — you do not need to change your `.env`.
 
+### AI / LLM setup
+
+By default the app bundles **Ollama** (a free, local LLM runner) inside Docker Compose.
+
+```env
+# backend/.env
+LLM_PROVIDER=ollama
+LLM_OLLAMA_URL=http://ollama:11434
+LLM_OLLAMA_MODEL=llama3.1
+```
+
+The default model is `llama3.1` (fast, capable, permissive license). On first start the Ollama container downloads the model — this may take several minutes depending on your connection. The model is cached in a Docker volume, so subsequent restarts are fast.
+
+To use a different free model, change `LLM_OLLAMA_MODEL` to any model from <https://ollama.com/library> (e.g. `mistral`, `qwen2.5`, `gemma2`) and restart:
+
+```bash
+docker compose down
+docker compose up --build -d
+```
+
+To use **Google Gemini** instead, set `LLM_PROVIDER=gemini` and add your API key from <https://aistudio.google.com/apikey>:
+
+```env
+LLM_PROVIDER=gemini
+LLM_API_KEY=your-gemini-key-here
+```
+
 ## Implementation Phases
 
 The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept local-only, not pushed to GitHub).

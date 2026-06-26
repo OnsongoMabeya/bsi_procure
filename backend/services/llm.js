@@ -88,28 +88,69 @@ async function extractTextFromFile(filePath) {
 }
 
 export async function scanTenderDocument(filePath) {
-  const provider = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
-
-  if (provider !== 'gemini') {
-    throw new Error(`LLM provider "${provider}" is not yet implemented. Only "gemini" is supported.`);
-  }
-
-  const apiKey = process.env.LLM_API_KEY;
-  if (!apiKey) throw new Error('LLM_API_KEY is not set in environment');
+  const provider = (process.env.LLM_PROVIDER || 'ollama').toLowerCase();
 
   const docText = await extractTextFromFile(filePath);
   if (!docText || docText.trim().length < 100) {
     throw new Error('Could not extract sufficient text from the document. It may be a scanned/image PDF — OCR support is coming in Phase 14.');
   }
 
+  const prompt = `${EXTRACTION_PROMPT}\n\n--- TENDER DOCUMENT TEXT ---\n${docText.slice(0, 60000)}`;
+
+  if (provider === 'gemini') {
+    return await scanWithGemini(prompt);
+  }
+
+  if (provider === 'ollama') {
+    return await scanWithOllama(prompt);
+  }
+
+  throw new Error(`LLM provider "${provider}" is not supported. Use "ollama" or "gemini".`);
+}
+
+async function scanWithGemini(prompt) {
+  const apiKey = process.env.LLM_API_KEY;
+  if (!apiKey) throw new Error('LLM_API_KEY is not set in environment for Gemini');
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-  const prompt = `${EXTRACTION_PROMPT}\n\n--- TENDER DOCUMENT TEXT ---\n${docText.slice(0, 60000)}`;
-
   const result = await model.generateContent(prompt);
   const text = result.response.text();
+  return parseLlmJson(text);
+}
 
+async function scanWithOllama(prompt) {
+  const url = `${process.env.LLM_OLLAMA_URL || 'http://localhost:11434'}/api/chat`;
+  const model = process.env.LLM_OLLAMA_MODEL || 'llama3.1';
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: 'You are a procurement document analyst. Extract all required documents from the tender text. Return ONLY a raw JSON object with a "checklist" array. Each item must have: name, category, is_form, form_reference, notes, suggested_assignee_role. No markdown, no explanation.' },
+        { role: 'user', content: prompt },
+      ],
+      stream: false,
+      format: 'json',
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Ollama returned ${res.status}: ${body}`);
+  }
+
+  const data = await res.json();
+  const text = data.message?.content;
+  if (!text) throw new Error('Ollama returned empty response');
+
+  return parseLlmJson(text);
+}
+
+function parseLlmJson(text) {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('LLM did not return valid JSON');
 

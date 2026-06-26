@@ -18,6 +18,25 @@ services:
       timeout: 5s
       retries: 5
 
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    container_name: bsi_ollama
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:11434/api/tags"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
   backend:
     build:
       context: .
@@ -28,6 +47,8 @@ services:
       - ./backend/.env
     environment:
       DB_HOST: mysql
+      LLM_PROVIDER: ollama
+      LLM_OLLAMA_URL: http://ollama:11434
     ports:
       - "5005:5005"
     volumes:
@@ -35,6 +56,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      ollama:
+        condition: service_started
 
   frontend:
     build:
@@ -50,3 +73,4 @@ services:
 volumes:
   mysql_data:
   uploads_data:
+  ollama_data:
