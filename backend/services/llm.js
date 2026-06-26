@@ -124,23 +124,37 @@ async function scanWithOllama(prompt) {
   const url = `${process.env.LLM_OLLAMA_URL || 'http://localhost:11434'}/api/chat`;
   const model = process.env.LLM_OLLAMA_MODEL || 'llama3.1';
 
-  const systemPrompt = `You are a procurement assistant. Your ONLY job is to read the tender document and extract a list of required documents/forms into a JSON object with a "checklist" array.
-
-Return ONLY this exact JSON shape and nothing else (no markdown, no explanation, no preamble):
-
-{"checklist":[{"name":"...","category":"...","is_form":false,"form_reference":null,"notes":"...","suggested_assignee_role":"..."}]}
+  const systemPrompt = `You are a procurement assistant. Extract all required documents and forms from the tender text and return them as a JSON checklist.
 
 Rules:
-- name: exact document name from the tender.
+- name: exact document/form name from the tender.
 - category: must be one of company_standing, financial, experience, tender_form, technical, it_related, other.
 - is_form: true only if the tender provides a specific pre-printed form to fill (e.g. "Form ELI-1", "Bid Security Form").
 - form_reference: the form code/name if is_form is true, otherwise null.
-- notes: any specific requirements (copies, validity, sign/stamp, etc.). Empty string if none.
-- suggested_assignee_role: one of FL, FIN, TECH, INFO, IT, HOT, ADMIN, or empty string.
+- notes: specific requirements (copies, validity, sign/stamp). Empty string if none.
+- suggested_assignee_role: one of FL, FIN, TECH, INFO, IT, HOT, ADMIN, or empty string.`;
 
-Example for a tender requiring company docs and a bid bond:
-
-{"checklist":[{"name":"Certificate of Incorporation","category":"company_standing","is_form":false,"form_reference":null,"notes":"Certified copy, valid","suggested_assignee_role":"FL"},{"name":"Bid Security Form","category":"tender_form","is_form":true,"form_reference":"BSF","notes":"2% of tender sum, valid 120 days","suggested_assignee_role":"FL"},{"name":"Audited financial statements","category":"financial","is_form":false,"form_reference":null,"notes":"Last 3 years","suggested_assignee_role":"FIN"}]}`;
+  const checklistSchema = {
+    type: 'object',
+    properties: {
+      checklist: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            category: { type: 'string', enum: ['company_standing', 'financial', 'experience', 'tender_form', 'technical', 'it_related', 'other'] },
+            is_form: { type: 'boolean' },
+            form_reference: { type: ['string', 'null'] },
+            notes: { type: 'string' },
+            suggested_assignee_role: { type: 'string', enum: ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', ''] },
+          },
+          required: ['name', 'category', 'is_form', 'form_reference', 'notes', 'suggested_assignee_role'],
+        },
+      },
+    },
+    required: ['checklist'],
+  };
 
   const res = await fetch(url, {
     method: 'POST',
@@ -152,7 +166,7 @@ Example for a tender requiring company docs and a bid bond:
         { role: 'user', content: prompt },
       ],
       stream: false,
-      format: 'json',
+      format: checklistSchema,
       options: {
         temperature: 0.1,
       },
