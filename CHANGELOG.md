@@ -236,11 +236,21 @@ This file records what was built in each phase, what decisions were made, and wh
 
 ### Intentionally stubbed
 - WhatsApp/in-app notifications to assigned users on confirmation → Phase 12
-- OpenAI / Anthropic / Ollama providers → Phase 14 (abstraction layer in place, just not wired)
+- OpenAI / Anthropic providers → Phase 14
 - OCR for scanned PDFs → Phase 14
 
 ### Required config
-Add to `backend/.env`:
+Two options:
+
+**Option A — Ollama (free, local, default in Docker Compose):**
+```env
+LLM_PROVIDER=ollama
+LLM_OLLAMA_URL=http://ollama:11434
+LLM_OLLAMA_MODEL=llama3.1
+```
+Ollama is bundled in Docker Compose. On first start it downloads the model (~4.7 GB) and caches it.
+
+**Option B — Google Gemini:**
 ```env
 LLM_PROVIDER=gemini
 LLM_API_KEY=your-gemini-api-key-here
