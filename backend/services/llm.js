@@ -17,7 +17,9 @@ ONLY extract items from these three tender sections (wording may vary):
 2. "Technical Evaluation" / "Technical Proposal" / "Technical Requirements" — technical documents and forms to be attached (e.g. technical proposal, equipment schedules, brochures, method statements, site visit forms).
 3. "Financial Evaluation" / "Financial Proposal" / "Financial Requirements" — financial forms and documents to be attached (e.g. priced bill of quantities, bid security form, financial statements, tax compliance certificate).
 
-IMPORTANT: Do NOT extract evaluation procedures, scoring rules, tender instructions, or general tender rules. Do NOT extract items like "Tender Price Comparison", "Abnormally Low Tenders", "Tender Envelope Seal", or "Responsiveness Check". Only extract real documents/forms that the bidder must prepare, fill, or source.
+IMPORTANT: Do NOT extract evaluation procedures, scoring rules, tender instructions, or general tender rules. Do NOT extract items like "Tender Price Comparison", "Abnormally Low Tenders", "Tender Envelope Seal", "Responsiveness Check", or "Tender Award Notification". Only extract real documents/forms that the bidder must prepare, fill, or source.
+
+If the tender document does not clearly list specific required documents or forms in the sections above, return an empty checklist array. Do NOT invent items to fill the checklist.
 
 For each document/form, return:
 - name: The exact name of the required document or form as written in the tender. Do not rename or summarize.
@@ -143,7 +145,9 @@ ONLY extract real documents/forms from these three sections (wording may vary):
 2. Technical Evaluation / Technical Proposal / Technical Requirements
 3. Financial Evaluation / Financial Proposal / Financial Requirements
 
-Do NOT extract evaluation procedures, scoring rules, tender instructions, or general tender rules. Do NOT extract items like "Tender Price Comparison", "Abnormally Low Tenders", "Tender Envelope Seal", or "Responsiveness Check".
+Do NOT extract evaluation procedures, scoring rules, tender instructions, or general tender rules. Do NOT extract items like "Tender Price Comparison", "Abnormally Low Tenders", "Tender Envelope Seal", "Responsiveness Check", or "Tender Award Notification".
+
+If the tender document does not clearly list specific required documents or forms in these sections, return an empty checklist array. Do NOT invent items.
 
 Rules:
 - name: exact document/form name as written in the tender. Do not rename. Create one item per listed document.
