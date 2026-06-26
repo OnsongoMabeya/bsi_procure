@@ -123,6 +123,29 @@ router.patch('/:id/feasibility', requireRole(...CAN_APPROVE), async (req, res) =
   }
 });
 
+// ── Replace uploaded document (creator or ADMIN) ─────────────────────────────
+router.patch('/:id/document', requireRole('ADMIN', 'FL', 'INFO'), (req, res) => {
+  uploadTenderDoc(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No document uploaded' });
+
+    try {
+      const tender = await Tender.findByPk(req.params.id);
+      if (!tender) return res.status(404).json({ error: 'Tender not found' });
+      if (req.user.role !== 'ADMIN' && tender.uploaded_by !== req.user.id) {
+        return res.status(403).json({ error: 'Only the creator or ADMIN can replace the document' });
+      }
+      await tender.update({
+        uploaded_document_path: req.file.path,
+        uploaded_document_name: req.file.originalname,
+      });
+      res.json({ message: 'Document replaced', uploaded_document_name: req.file.originalname });
+    } catch (dbErr) {
+      res.status(500).json({ error: dbErr.message });
+    }
+  });
+});
+
 // ── Get checklist ─────────────────────────────────────────────────────────────
 router.get('/:id/checklist', async (req, res) => {
   try {

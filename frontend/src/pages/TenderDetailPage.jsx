@@ -47,6 +47,8 @@ export default function TenderDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [feasError, setFeasError] = useState('');
   const [archiving, setArchiving] = useState(false);
+  const [replacingDoc, setReplacingDoc] = useState(false);
+  const [docFile, setDocFile] = useState(null);
 
   const fetchTender = async () => {
     try {
@@ -104,6 +106,30 @@ export default function TenderDetailPage() {
       setError(e.message);
     } finally {
       setArchiving(false);
+    }
+  };
+
+  const handleReplaceDocument = async (e) => {
+    e.preventDefault();
+    if (!docFile) return setError('Select a file to upload');
+    setReplacingDoc(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('document', docFile);
+      const res = await fetch(`/api/tenders/${id}/document`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      await fetchTender();
+      setDocFile(null);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setReplacingDoc(false);
     }
   };
 
@@ -169,6 +195,26 @@ export default function TenderDetailPage() {
               >
                 📎 {tender.uploaded_document_name}
               </a>
+            </div>
+          )}
+          {['ADMIN', 'FL', 'INFO'].includes(user?.role) && (
+            <div style={s.metaItem}>
+              <span style={s.metaLabel}>Replace Document</span>
+              <form onSubmit={handleReplaceDocument} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={e => setDocFile(e.target.files[0])}
+                  style={{ fontSize: 12, maxWidth: 200 }}
+                />
+                <button
+                  type="submit"
+                  disabled={!docFile || replacingDoc}
+                  style={s.btnSmall}
+                >
+                  {replacingDoc ? 'Uploading…' : 'Replace'}
+                </button>
+              </form>
             </div>
           )}
         </div>
@@ -300,4 +346,5 @@ const s = {
   formActions: { display: 'flex', justifyContent: 'flex-end' },
   btnSubmit: { padding: '9px 28px', border: 'none', borderRadius: 7, color: '#fff', fontSize: 14, fontWeight: 700 },
   btnArchive: { padding: '7px 16px', background: '#fff', border: '1.5px solid var(--red)', color: 'var(--red)', borderRadius: 6, fontSize: 13, fontWeight: 600 },
+  btnSmall: { padding: '5px 12px', background: '#fff', border: '1px solid var(--border)', color: 'var(--text-main)', borderRadius: 5, fontSize: 12, fontWeight: 600 },
 };
