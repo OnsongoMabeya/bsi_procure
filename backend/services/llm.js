@@ -10,33 +10,36 @@ const pdfParse = require('pdf-parse');
 
 const EXTRACTION_PROMPT = `You are a procurement document analyst for Broadcast Solutions International (BSI), a Kenyan broadcast and AV technology company.
 
-You have been given a tender document. Your job is to extract a complete, accurate checklist of ALL documents that the tenderer (BSI) must compile and submit in response to this tender.
+You have been given a tender document. Your job is to extract a complete, accurate checklist of ALL documents, forms, certificates, and attachments that the tenderer (BSI) must actually compile and submit with the tender response.
 
-Focus especially on the three standard tender sections below. The wording may vary, but these sections are always present:
-1. "Evaluation and Qualification Criteria" / "Mandatory Requirements" / "Eligibility Requirements" — lists documents the bidder must submit to qualify.
-2. "Technical Evaluation" / "Technical Proposal" / "Technical Requirements" — technical content and supporting technical documents.
-3. "Financial Evaluation" / "Financial Proposal" / "Financial Requirements" — financial forms, pricing schedules, and supporting financial documents.
+ONLY extract items from these three tender sections (wording may vary):
+1. "Evaluation and Qualification Criteria" / "Mandatory Requirements" / "Eligibility Requirements" / "Qualification of the Tenderer" — lists the actual documents the bidder must attach (e.g. certificates, licenses, forms, letters).
+2. "Technical Evaluation" / "Technical Proposal" / "Technical Requirements" — technical documents and forms to be attached (e.g. technical proposal, equipment schedules, brochures, method statements, site visit forms).
+3. "Financial Evaluation" / "Financial Proposal" / "Financial Requirements" — financial forms and documents to be attached (e.g. priced bill of quantities, bid security form, financial statements, tax compliance certificate).
 
-Extract every required document, form, certificate, declaration, and attachment mentioned in these sections. Use the EXACT document name as it appears in the tender text. Do not rename or summarize. If a section lists sub-items (e.g., "i. Brochure supporting", "ii. Recommendation letters"), create a separate checklist item for each sub-item.
+IMPORTANT: Do NOT extract evaluation procedures, scoring rules, tender instructions, or general tender rules. Do NOT extract items like "Tender Price Comparison", "Abnormally Low Tenders", "Tender Envelope Seal", or "Responsiveness Check". Only extract real documents/forms that the bidder must prepare, fill, or source.
 
-For each item, return:
-- name: The exact name of the required document or form as written in the tender
+For each document/form, return:
+- name: The exact name of the required document or form as written in the tender. Do not rename or summarize.
 - category: One of: company_standing, financial, experience, tender_form, technical, it_related, other
-- is_form: true if this is a pre-printed form from the tender document that must be filled in, false if it is a supporting document to be sourced
-- form_reference: If is_form is true, the form code (e.g., "ELI-1.1", "CBQ", "FIN-3.1"). Otherwise null.
-- notes: Any specific instructions about this document (validity requirements, number of copies, attachments required, etc.)
-- suggested_assignee_role: A comma-separated list of roles from: FL, INFO, FIN, TECH, IT, HOT, ADMIN, GM. Use multiple roles where appropriate.
+- is_form: true only if this is a pre-printed form provided in the tender document that must be filled in (e.g. "Form ELI-1", "Bid Security Form", "Tender Submission Form"). false if it is a supporting document to be sourced by the bidder (e.g. "Certificate of Incorporation", "Tax Compliance Certificate", "Bank Reference Letter").
+- form_reference: If is_form is true, the form code/name (e.g. "ELI-1.1", "CBQ", "FIN-3.1"). Otherwise null.
+- notes: Any specific instructions (validity, number of copies, certified, signed/stamped, attachments). Empty string if none.
+- suggested_assignee_role: A comma-separated list of roles from: FL, INFO, FIN, TECH, IT, HOT, ADMIN, GM.
 
-Use these assignment rules by section:
+Categorization rules (be strict):
+- company_standing: company registration, CR12, tax certificates, KRA PIN, business licenses, VAT registration, compliance certificates, stamps, signatures, director's authorization, power of attorney.
+- financial: bank reference letters, audited financial statements, bid security/bank guarantee, priced BOQ, financial forms, tax compliance certificate, insurance certificate, tender fees receipt.
+- experience: past performance certificates, reference letters, similar work experience, CVs of key personnel, project references.
+- tender_form: pre-printed tender forms supplied by the procuring entity (e.g. Tender Submission Form, Bid Security Form, Declaration Form, Form ELI-1, Form FIN-3).
+- technical: technical proposal, equipment specifications, method statement, work schedule, site visit confirmation, commissioning plan, maintenance plan, technical drawings, factory acceptance test report.
+- it_related: IT certifications, software licenses, network diagrams, cybersecurity certificates, system architecture.
+- other: anything that does not fit above.
+
+Section assignment rules:
 - Mandatory / Qualification / Eligibility documents → INFO, GM, ADMIN
-- Technical evaluation / technical proposal documents → TECH, IT, GM, ADMIN
-- Financial evaluation / financial proposal documents → FIN, FL, GM, ADMIN
-
-Within mandatory documents, categorize as follows:
-- Company registration, tax certificates, licenses, compliance, stamps, signatures → company_standing
-- Bank references, financial statements, audit reports, financial forms → financial
-- Past experience, references, performance certificates, similar work → experience
-- Tender-specific pre-printed forms (bid bond, declaration, ELI forms) → tender_form
+- Technical proposal / technical requirement documents → TECH, IT, GM, ADMIN
+- Financial proposal / financial requirement documents → FIN, FL, GM, ADMIN
 
 Return ONLY valid JSON. No preamble, no markdown, no explanation. Format:
 {
@@ -133,31 +136,53 @@ async function scanWithOllama(prompt) {
   const url = `${process.env.LLM_OLLAMA_URL || 'http://localhost:11434'}/api/chat`;
   const model = process.env.LLM_OLLAMA_MODEL || 'llama3.1';
 
-  const systemPrompt = `You are a procurement assistant for a Kenyan broadcast/AV company. Extract all required documents and forms from the tender text and return them as a JSON checklist.
+  const systemPrompt = `You are a procurement assistant for a Kenyan broadcast/AV company. Extract all required documents, forms, certificates, and attachments from the tender text and return them as a JSON checklist.
 
-Focus on these three tender sections (wording may vary):
-1. Evaluation / Qualification / Mandatory Requirements
+ONLY extract real documents/forms from these three sections (wording may vary):
+1. Evaluation / Qualification / Mandatory / Eligibility Requirements
 2. Technical Evaluation / Technical Proposal / Technical Requirements
 3. Financial Evaluation / Financial Proposal / Financial Requirements
+
+Do NOT extract evaluation procedures, scoring rules, tender instructions, or general tender rules. Do NOT extract items like "Tender Price Comparison", "Abnormally Low Tenders", "Tender Envelope Seal", or "Responsiveness Check".
 
 Rules:
 - name: exact document/form name as written in the tender. Do not rename. Create one item per listed document.
 - category: one of company_standing, financial, experience, tender_form, technical, it_related, other.
-- is_form: true only if the tender provides a specific pre-printed form to fill.
+- is_form: true only if the tender provides a specific pre-printed form to fill. false for supporting documents to be sourced.
 - form_reference: the form code/name if is_form is true, otherwise null.
 - notes: specific requirements (copies, validity, sign/stamp). Empty string if none.
 - suggested_assignee_role: comma-separated roles from FL, INFO, FIN, TECH, IT, HOT, ADMIN, GM. Use multiple roles where appropriate.
+
+Categorization rules (be strict):
+- company_standing: company registration, CR12, tax certificates, KRA PIN, business licenses, compliance, stamps, signatures.
+- financial: bank references, audited financial statements, bid security, priced BOQ, financial forms, tax compliance, insurance, tender fees.
+- experience: past performance certificates, reference letters, similar work, CVs, project references.
+- tender_form: pre-printed tender forms supplied by the procuring entity (Tender Submission Form, Bid Security Form, Declaration Form, ELI forms, FIN forms).
+- technical: technical proposal, equipment specs, method statement, work schedule, site visit confirmation, maintenance plan, drawings, test reports.
+- it_related: IT certifications, software licenses, network diagrams, cybersecurity.
+- other: anything that does not fit above.
 
 Section assignment rules:
 - Mandatory / Qualification documents → INFO, GM, ADMIN
 - Technical documents → TECH, IT, GM, ADMIN
 - Financial documents → FIN, FL, GM, ADMIN
 
-Mandatory document categorization:
-- Company registration, tax, licenses, compliance → company_standing
-- Bank references, financial statements, audit reports → financial
-- Past experience, references, performance certificates → experience
-- Tender-specific pre-printed forms → tender_form`;
+Example output for a standard tender:
+{
+  "checklist": [
+    {"name": "Tender Submission Form", "category": "tender_form", "is_form": true, "form_reference": "TSF", "notes": "Duly filled, signed and stamped", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Certificate of Incorporation", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Certified copy, valid", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "CR12 Form", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Current (within 6 months)", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "KRA Tax Compliance Certificate", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Valid and certified", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Audited Financial Statements", "category": "financial", "is_form": false, "form_reference": null, "notes": "Last 3 years", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
+    {"name": "Bank Reference Letter", "category": "financial", "is_form": false, "form_reference": null, "notes": "From reputable bank, current", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
+    {"name": "Bid Security Form", "category": "tender_form", "is_form": true, "form_reference": "BSF", "notes": "2% of tender sum, valid 120 days", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
+    {"name": "Past Performance Certificate / Reference Letters", "category": "experience", "is_form": false, "form_reference": null, "notes": "At least 3 similar completed projects", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Technical Proposal", "category": "technical", "is_form": false, "form_reference": null, "notes": "Equipment schedule, method statement, work plan", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "Brochure Supporting Technical Proposal", "category": "technical", "is_form": false, "form_reference": null, "notes": "Manufacturer brochures for proposed equipment", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "Priced Bill of Quantities", "category": "financial", "is_form": true, "form_reference": "BOQ", "notes": "Signed and priced as per tender schedule", "suggested_assignee_role": "FIN,FL,GM,ADMIN"}
+  ]
+}`;
 
   const checklistSchema = {
     type: 'object',
