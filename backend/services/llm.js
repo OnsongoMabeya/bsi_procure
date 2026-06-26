@@ -236,6 +236,9 @@ Example output for a standard tender:
   const text = data.message?.content;
   if (!text) throw new Error('Ollama returned empty response');
 
+  console.log(`[Ollama] Model: ${model}`);
+  console.log('[Ollama] Raw response:', text.slice(0, 3000));
+
   try {
     return parseLlmJson(text);
   } catch (err) {
