@@ -10,7 +10,7 @@ router.use(authMiddleware);
 const CAN_SCAN = ['FL', 'INFO', 'ADMIN'];
 
 const VALID_CATEGORIES = ['company_standing', 'financial', 'experience', 'tender_form', 'technical', 'it_related', 'other'];
-const VALID_ROLES = ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', ''];
+const VALID_ROLES = ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', 'GM', ''];
 
 function normalizeCategory(value) {
   if (!value || typeof value !== 'string') return 'other';
@@ -30,9 +30,11 @@ function normalizeCategory(value) {
 
 function normalizeRole(value) {
   if (!value || typeof value !== 'string') return '';
-  const upper = value.toUpperCase().trim();
-  if (VALID_ROLES.includes(upper)) return upper;
-  return '';
+  const roles = value.split(/[,;\s]+/).map(r => r.trim().toUpperCase()).filter(Boolean);
+  const valid = roles.filter(r => VALID_ROLES.includes(r));
+  // Remove duplicates while preserving order
+  const unique = [...new Set(valid)];
+  return unique.join(',');
 }
 
 router.post('/scan-tender/:tenderId', requireRole(...CAN_SCAN), async (req, res) => {

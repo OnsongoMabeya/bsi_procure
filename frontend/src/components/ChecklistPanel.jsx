@@ -24,7 +24,14 @@ const STATUS_COLORS = {
   REJECTED:    { bg: '#fee2e2', color: '#991b1b' },
 };
 
-const ROLES = ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN'];
+const ROLES = ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', 'GM'];
+
+const parseRoles = (value) => {
+  if (!value) return [];
+  return String(value).split(/[,;\s]+/).map(r => r.trim()).filter(Boolean);
+};
+
+const formatRoles = (roles) => roles.filter(Boolean).join(',');
 
 export default function ChecklistPanel({ tender, onTenderUpdate }) {
   const { user, token } = useAuth();
@@ -230,12 +237,25 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
             </label>
           </div>
           <div style={s.row}>
-            <label style={s.field}>
-              <span style={s.lbl}>Assign Role</span>
-              <select style={s.input} value={newItem.suggested_assignee_role} onChange={e => setNewItem(f => ({ ...f, suggested_assignee_role: e.target.value }))}>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </label>
+            <div style={s.field}>
+              <span style={s.lbl}>Suggested Roles</span>
+              <div style={s.roleGroup}>
+                {ROLES.map(r => (
+                  <label key={r} style={s.roleCheckbox}>
+                    <input
+                      type="checkbox"
+                      checked={parseRoles(newItem.suggested_assignee_role).includes(r)}
+                      onChange={() => {
+                        const current = parseRoles(newItem.suggested_assignee_role);
+                        const next = current.includes(r) ? current.filter(x => x !== r) : [...current, r];
+                        setNewItem(f => ({ ...f, suggested_assignee_role: formatRoles(next) }));
+                      }}
+                    />
+                    {r}
+                  </label>
+                ))}
+              </div>
+            </div>
             <label style={s.field}>
               <span style={s.lbl}>Assign User</span>
               <select style={s.input} value={newItem.assigned_to} onChange={e => setNewItem(f => ({ ...f, assigned_to: e.target.value }))}>
@@ -304,12 +324,25 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
                           {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
                         </select>
                       </label>
-                      <label style={s.field}>
-                        <span style={s.lbl}>Suggested Role</span>
-                        <select style={s.input} value={editForm.suggested_assignee_role} onChange={e => setEditForm(f => ({ ...f, suggested_assignee_role: e.target.value }))}>
-                          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
-                      </label>
+                      <div style={s.field}>
+                        <span style={s.lbl}>Suggested Roles</span>
+                        <div style={s.roleGroup}>
+                          {ROLES.map(r => (
+                            <label key={r} style={s.roleCheckbox}>
+                              <input
+                                type="checkbox"
+                                checked={parseRoles(editForm.suggested_assignee_role).includes(r)}
+                                onChange={() => {
+                                  const current = parseRoles(editForm.suggested_assignee_role);
+                                  const next = current.includes(r) ? current.filter(x => x !== r) : [...current, r];
+                                  setEditForm(f => ({ ...f, suggested_assignee_role: formatRoles(next) }));
+                                }}
+                              />
+                              {r}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <label style={s.field}>
                       <span style={s.lbl}>Notes</span>
@@ -332,7 +365,13 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
                     </div>
                     <div style={s.itemMeta}>
                       <span style={s.assignee}>
-                        {item.assignee ? `${item.assignee.name} (${item.assignee.role})` : item.suggested_assignee_role ? `Role: ${item.suggested_assignee_role}` : '—'}
+                        {item.assignee ? `${item.assignee.name} (${item.assignee.role})` : item.suggested_assignee_role ? (
+                          <span style={s.roleChips}>
+                            {parseRoles(item.suggested_assignee_role).map(r => (
+                              <span key={r} style={s.roleChip}>{r}</span>
+                            ))}
+                          </span>
+                        ) : '—'}
                       </span>
                       <span style={{ ...s.statusBadge, background: STATUS_COLORS[item.status]?.bg, color: STATUS_COLORS[item.status]?.color }}>
                         {item.status}
@@ -391,4 +430,8 @@ const s = {
   field: { display: 'flex', flexDirection: 'column', flex: 1, minWidth: 160 },
   lbl: { fontSize: 11, fontWeight: 600, color: 'var(--text-main)', marginBottom: 3 },
   input: { padding: '7px 9px', border: '1px solid var(--border)', borderRadius: 5, fontSize: 13, color: 'var(--text-main)', background: '#fff' },
+  roleGroup: { display: 'flex', flexWrap: 'wrap', gap: 10, padding: '6px 0' },
+  roleCheckbox: { display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-main)', cursor: 'pointer' },
+  roleChips: { display: 'flex', flexWrap: 'wrap', gap: 4 },
+  roleChip: { background: '#f3f4f6', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 600, color: 'var(--text-main)' },
 };

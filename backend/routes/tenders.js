@@ -5,6 +5,16 @@ import Tender from '../models/Tender.js';
 import User from '../models/User.js';
 import ChecklistItem from '../models/ChecklistItem.js';
 
+const VALID_ROLES = ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', 'GM', ''];
+
+function normalizeRole(value) {
+  if (!value || typeof value !== 'string') return null;
+  const roles = value.split(/[,;\s]+/).map(r => r.trim().toUpperCase()).filter(Boolean);
+  const valid = roles.filter(r => VALID_ROLES.includes(r));
+  const unique = [...new Set(valid)];
+  return unique.length ? unique.join(',') : null;
+}
+
 const router = Router();
 
 router.use(authMiddleware);
@@ -173,7 +183,7 @@ router.post('/:id/checklist', requireRole('FL', 'INFO', 'ADMIN'), async (req, re
       is_form: is_form || false,
       form_reference: form_reference || null,
       notes: notes || null,
-      suggested_assignee_role: suggested_assignee_role || null,
+      suggested_assignee_role: normalizeRole(suggested_assignee_role),
       assigned_to: assigned_to || null,
       order_index: count,
     });
@@ -189,7 +199,7 @@ router.patch('/:id/checklist/:itemId', requireRole('FL', 'INFO', 'ADMIN'), async
     const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id } });
     if (!item) return res.status(404).json({ error: 'Checklist item not found' });
     const { name, category, is_form, form_reference, notes, suggested_assignee_role, assigned_to } = req.body;
-    await item.update({ name, category, is_form, form_reference, notes, suggested_assignee_role, assigned_to });
+    await item.update({ name, category, is_form, form_reference, notes, suggested_assignee_role: normalizeRole(suggested_assignee_role), assigned_to });
     res.json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });

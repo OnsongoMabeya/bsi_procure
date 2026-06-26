@@ -12,22 +12,31 @@ const EXTRACTION_PROMPT = `You are a procurement document analyst for Broadcast 
 
 You have been given a tender document. Your job is to extract a complete, accurate checklist of ALL documents that the tenderer (BSI) must compile and submit in response to this tender.
 
-Extract every required document, form, certificate, declaration, and attachment mentioned anywhere in the tender document.
+Focus especially on the three standard tender sections below. The wording may vary, but these sections are always present:
+1. "Evaluation and Qualification Criteria" / "Mandatory Requirements" / "Eligibility Requirements" — lists documents the bidder must submit to qualify.
+2. "Technical Evaluation" / "Technical Proposal" / "Technical Requirements" — technical content and supporting technical documents.
+3. "Financial Evaluation" / "Financial Proposal" / "Financial Requirements" — financial forms, pricing schedules, and supporting financial documents.
+
+Extract every required document, form, certificate, declaration, and attachment mentioned in these sections. Use the EXACT document name as it appears in the tender text. Do not rename or summarize. If a section lists sub-items (e.g., "i. Brochure supporting", "ii. Recommendation letters"), create a separate checklist item for each sub-item.
 
 For each item, return:
-- name: The exact name of the required document or form
+- name: The exact name of the required document or form as written in the tender
 - category: One of: company_standing, financial, experience, tender_form, technical, it_related, other
 - is_form: true if this is a pre-printed form from the tender document that must be filled in, false if it is a supporting document to be sourced
 - form_reference: If is_form is true, the form code (e.g., "ELI-1.1", "CBQ", "FIN-3.1"). Otherwise null.
 - notes: Any specific instructions about this document (validity requirements, number of copies, attachments required, etc.)
-- suggested_assignee_role: One of: FL, INFO, FIN, TECH, IT, HOT
+- suggested_assignee_role: A comma-separated list of roles from: FL, INFO, FIN, TECH, IT, HOT, ADMIN, GM. Use multiple roles where appropriate.
 
-Use these assignment rules:
-- Company registration, certification, stamp, signatures, form filling → INFO
-- Financial statements, financial forms, tax certificates → FL
-- Technical specifications, equipment lists → TECH or HOT
-- IT-related certifications → IT
-- Past contracts/experience forms → FL
+Use these assignment rules by section:
+- Mandatory / Qualification / Eligibility documents → INFO, GM, ADMIN
+- Technical evaluation / technical proposal documents → TECH, IT, GM, ADMIN
+- Financial evaluation / financial proposal documents → FIN, FL, GM, ADMIN
+
+Within mandatory documents, categorize as follows:
+- Company registration, tax certificates, licenses, compliance, stamps, signatures → company_standing
+- Bank references, financial statements, audit reports, financial forms → financial
+- Past experience, references, performance certificates, similar work → experience
+- Tender-specific pre-printed forms (bid bond, declaration, ELI forms) → tender_form
 
 Return ONLY valid JSON. No preamble, no markdown, no explanation. Format:
 {
@@ -124,15 +133,31 @@ async function scanWithOllama(prompt) {
   const url = `${process.env.LLM_OLLAMA_URL || 'http://localhost:11434'}/api/chat`;
   const model = process.env.LLM_OLLAMA_MODEL || 'llama3.1';
 
-  const systemPrompt = `You are a procurement assistant. Extract all required documents and forms from the tender text and return them as a JSON checklist.
+  const systemPrompt = `You are a procurement assistant for a Kenyan broadcast/AV company. Extract all required documents and forms from the tender text and return them as a JSON checklist.
+
+Focus on these three tender sections (wording may vary):
+1. Evaluation / Qualification / Mandatory Requirements
+2. Technical Evaluation / Technical Proposal / Technical Requirements
+3. Financial Evaluation / Financial Proposal / Financial Requirements
 
 Rules:
-- name: exact document/form name from the tender.
-- category: must be one of company_standing, financial, experience, tender_form, technical, it_related, other.
-- is_form: true only if the tender provides a specific pre-printed form to fill (e.g. "Form ELI-1", "Bid Security Form").
+- name: exact document/form name as written in the tender. Do not rename. Create one item per listed document.
+- category: one of company_standing, financial, experience, tender_form, technical, it_related, other.
+- is_form: true only if the tender provides a specific pre-printed form to fill.
 - form_reference: the form code/name if is_form is true, otherwise null.
 - notes: specific requirements (copies, validity, sign/stamp). Empty string if none.
-- suggested_assignee_role: one of FL, FIN, TECH, INFO, IT, HOT, ADMIN, or empty string.`;
+- suggested_assignee_role: comma-separated roles from FL, INFO, FIN, TECH, IT, HOT, ADMIN, GM. Use multiple roles where appropriate.
+
+Section assignment rules:
+- Mandatory / Qualification documents → INFO, GM, ADMIN
+- Technical documents → TECH, IT, GM, ADMIN
+- Financial documents → FIN, FL, GM, ADMIN
+
+Mandatory document categorization:
+- Company registration, tax, licenses, compliance → company_standing
+- Bank references, financial statements, audit reports → financial
+- Past experience, references, performance certificates → experience
+- Tender-specific pre-printed forms → tender_form`;
 
   const checklistSchema = {
     type: 'object',
@@ -147,7 +172,7 @@ Rules:
             is_form: { type: 'boolean' },
             form_reference: { type: ['string', 'null'] },
             notes: { type: 'string' },
-            suggested_assignee_role: { type: 'string', enum: ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', ''] },
+            suggested_assignee_role: { type: 'string' },
           },
           required: ['name', 'category', 'is_form', 'form_reference', 'notes', 'suggested_assignee_role'],
         },

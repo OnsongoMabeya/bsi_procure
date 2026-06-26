@@ -33,7 +33,7 @@ const ChecklistItem = sequelize.define('ChecklistItem', {
     allowNull: true,
   },
   suggested_assignee_role: {
-    type: DataTypes.STRING(10),
+    type: DataTypes.STRING(100),
     allowNull: true,
   },
   assigned_to: {
