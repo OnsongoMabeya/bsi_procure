@@ -37,6 +37,28 @@ function normalizeRole(value) {
   return unique.join(',');
 }
 
+const PROCEDURE_ITEM_NAMES = [
+  'tender opening', 'tender submission', 'evaluation of tenders', 'comparison of tenders',
+  'tender price comparison', 'abnormally low tenders', 'abnormally high tenders',
+  'unbalanced and/or front-loaded tenders', 'tender envelope seal', 'responsiveness check',
+  'tender award notification', 'clarification', 'correction of arithmetic errors',
+  'negotiations', 'post-qualification', 'best evaluated tender', 'tender evaluation criteria',
+  'tender documentation', 'tender validity', 'award of contract', 'contract signing'
+];
+
+function isProcedureItem(item) {
+  if (!item.name || typeof item.name !== 'string') return true;
+  const lower = item.name.toLowerCase();
+  // Drop if the item name is clearly a procedure
+  if (PROCEDURE_ITEM_NAMES.some(p => lower.includes(p))) return true;
+  // Drop if the item describes what the procuring entity does
+  const notes = (item.notes || '').toLowerCase();
+  if (notes.includes('procuring entity') && (
+    notes.includes('shall evaluate') || notes.includes('may require') || notes.includes('shall conduct') || notes.includes('shall be conducted')
+  )) return true;
+  return false;
+}
+
 router.post('/scan-tender/:tenderId', requireRole(...CAN_SCAN), async (req, res) => {
   try {
     const tender = await Tender.findByPk(req.params.tenderId);
@@ -54,8 +76,10 @@ router.post('/scan-tender/:tenderId', requireRole(...CAN_SCAN), async (req, res)
 
     await ChecklistItem.destroy({ where: { tender_id: tender.id } });
 
+    const filteredChecklist = (result.checklist || []).filter(item => !isProcedureItem(item));
+
     const items = await ChecklistItem.bulkCreate(
-      result.checklist.map((item, idx) => ({
+      filteredChecklist.map((item, idx) => ({
         tender_id: tender.id,
         name: item.name,
         category: normalizeCategory(item.category),
@@ -70,7 +94,11 @@ router.post('/scan-tender/:tenderId', requireRole(...CAN_SCAN), async (req, res)
 
     await tender.update({ checklist_confirmed: false });
 
-    res.json({ message: `Extracted ${items.length} checklist items`, items });
+    const dropped = (result.checklist || []).length - filteredChecklist.length;
+    res.json({
+      message: `Extracted ${items.length} checklist items${dropped > 0 ? ` (filtered out ${dropped} non-document items)` : ''}`,
+      items
+    });
   } catch (err) {
     console.error('AI scan error:', err.message);
     res.status(500).json({ error: err.message });
