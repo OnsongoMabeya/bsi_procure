@@ -3,6 +3,7 @@ import path from 'path';
 import { createRequire } from 'module';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import mammoth from 'mammoth';
+import WordExtractor from 'word-extractor';
 
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
@@ -48,19 +49,42 @@ Return ONLY valid JSON. No preamble, no markdown, no explanation. Format:
 
 async function extractTextFromFile(filePath) {
   const ext = path.extname(filePath).toLowerCase();
+  const filename = path.basename(filePath);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Uploaded file not found on server: ${filename}. Please re-upload the document.`);
+  }
+
   const buffer = fs.readFileSync(filePath);
+  if (buffer.length === 0) {
+    throw new Error(`Uploaded file is empty: ${filename}. Please re-upload the document.`);
+  }
 
   if (ext === '.pdf') {
     const data = await pdfParse(buffer);
     return data.text;
   }
 
-  if (ext === '.docx' || ext === '.doc') {
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
+  if (ext === '.docx') {
+    try {
+      const result = await mammoth.extractRawText({ buffer });
+      return result.value;
+    } catch (err) {
+      throw new Error(`Could not read ${filename}. The .docx file may be corrupted or password-protected. Try saving it as PDF and re-uploading.`);
+    }
   }
 
-  throw new Error(`Unsupported file type: ${ext}`);
+  if (ext === '.doc') {
+    try {
+      const extractor = new WordExtractor();
+      const doc = await extractor.extract(filePath);
+      return doc.getBody();
+    } catch (err) {
+      throw new Error(`Could not read ${filename}. The .doc file may be corrupted or password-protected. Try saving it as .docx or PDF and re-uploading.`);
+    }
+  }
+
+  throw new Error(`Unsupported file type: ${ext}. Please upload PDF, .docx, or .doc.`);
 }
 
 export async function scanTenderDocument(filePath) {
