@@ -114,6 +114,11 @@ export async function scanTenderDocument(filePath) {
     throw new Error('Could not extract sufficient text from the document. It may be a scanned/image PDF — OCR support is coming in Phase 14.');
   }
 
+  console.log(`[scanTenderDocument] File path: ${filePath}`);
+  console.log(`[scanTenderDocument] Extracted text length: ${docText.length} chars`);
+  console.log(`[scanTenderDocument] First 1000 chars:`, docText.slice(0, 1000));
+  console.log(`[scanTenderDocument] Last 1000 chars:`, docText.slice(-1000));
+
   const prompt = `${EXTRACTION_PROMPT}\n\n--- TENDER DOCUMENT TEXT ---\n${docText.slice(0, 60000)}`;
 
   if (provider === 'gemini') {
