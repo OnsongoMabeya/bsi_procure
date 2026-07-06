@@ -107,60 +107,90 @@ async function extractTextFromFile(filePath) {
 }
 
 function extractRelevantSections(docText) {
-  // Split document into sections by common tender headers (including Kenyan STAGE sections)
-  const sectionRegex = /\n\s*(?:Section\s+[IVX]+|PART\s+\d+|STAGE\s+\d+[:\.]?|PHASE\s+\d+[:\.]?|\d+\.\s+[A-Z][A-Z\s]+|\b[A-Z][A-Z\s]{3,}[A-Z]\b)\s*\n/;
-  const parts = docText.split(sectionRegex).filter(Boolean);
-  const headers = docText.match(sectionRegex) || [];
-
-  // Keywords that indicate sections containing required documents
-  const relevantKeywords = [
+  // Keywords that strongly indicate sections containing required bidder documents
+  const sectionHeaderKeywords = [
     'evaluation and qualification', 'qualification criteria', 'mandatory requirement',
     'eligibility requirement', 'qualification of the tenderer', 'documents to be submitted',
     'documents required', 'documents required to be submitted', 'mandatory documents',
     'technical evaluation', 'technical proposal', 'technical requirement', 'technical documents',
     'financial evaluation', 'financial proposal', 'financial requirement', 'financial documents',
-    'tender submission form', 'bid security', 'tender security', 'declaration',
+    'tender submission form', 'bid security', 'tender security', 'declaration form',
     'certificate of incorporation', 'tax compliance', 'tax certificate', 'audited financial',
     'bank reference', 'performance certificate', 'reference letter', 'power of attorney',
     'business permit', 'cr12', 'cr13', 'single business', 'confidential business questionnaire',
     'independent tender determination', 'code of ethics', 'self-declaration', 'site visit',
     'dealership authorization', 'nca', 'energy regulatory commission', 'erc', 'lines of credit',
     'workplan', 'resumes', 'brochures', 'lpo', 'lso', 'recommendation letter', 'delivery commitment',
-    'financial capacity', 'turnover', 'method statement', 'schedule of requirements', 'bill of quantities'
+    'financial capacity', 'turnover', 'method statement', 'schedule of requirements', 'bill of quantities',
+    'stage 1', 'stage 2', 'stage 3'
   ];
 
   // Negative keywords that indicate procedural/evaluation-method sections to skip
   const procedureKeywords = [
-    'responsiveness', 'only the tenders that meet', 'shall proceed to',
-    'to qualify for financial evaluation', 'the corporation reserves the right',
+    'only the tenders that meet', 'shall proceed to', 'to qualify for',
     'the following procedure will guide', 'comparison of quoted amounts',
     'ascertain that', 'market survey report', 'ranking of bids', 'lowest evaluated bid',
     'evaluation process', 'scoring rules', 'the procuring entity shall',
     'tender opening', 'tender award', 'clarification', 'negotiation', 'post-qualification'
   ];
 
-  const selected = [];
-  // Always include the first chunk (usually has title/scope)
-  selected.push(parts[0] || '');
+  // Header patterns used to split the document into candidate sections
+  const headerRegex = /\n\s*(?:Section\s+[IVX]+|PART\s+\d+|STAGE\s+\d+[:\.]?|PHASE\s+\d+[:\.]?|\d+\s*[.):]\s*(?:[A-Z][A-Za-z\s]{2,}|\b[A-Z\s]{5,}[A-Z]\b)|\b[A-Z][A-Z\s]{5,}[A-Z]\b)\s*\n/g;
 
-  for (let i = 0; i < headers.length; i++) {
-    const header = headers[i].toLowerCase();
-    const body = parts[i + 1] || '';
-    const combined = (header + ' ' + body.slice(0, 800)).toLowerCase();
-    const isRelevant = relevantKeywords.some(k => combined.includes(k));
-    const isProcedure = procedureKeywords.some(k => combined.includes(k)) &&
-      !relevantKeywords.some(k => header.includes(k) && k !== 'financial evaluation' && k !== 'technical evaluation');
-    if (isRelevant && !isProcedure) {
-      selected.push(headers[i] + body);
+  // Split into sections preserving headers
+  const sections = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = headerRegex.exec(docText)) !== null) {
+    if (match.index > lastIndex) {
+      sections.push(docText.slice(lastIndex, match.index));
+    }
+    sections.push(match[0]);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < docText.length) {
+    sections.push(docText.slice(lastIndex));
+  }
+
+  // Group sections into chunks (header + body) and score them
+  const chunks = [];
+  for (let i = 0; i < sections.length; i++) {
+    if (headerRegex.test(sections[i]) || (i === 0)) {
+      const header = sections[i];
+      const body = sections[i + 1] || '';
+      const combined = (header + ' ' + body).toLowerCase();
+      const relevanceScore = sectionHeaderKeywords.reduce((score, k) => score + (combined.includes(k) ? 1 : 0), 0);
+      const procedureScore = procedureKeywords.reduce((score, k) => score + (combined.includes(k) ? 1 : 0), 0);
+      chunks.push({ header, body, combined, relevanceScore, procedureScore });
     }
   }
 
-  // Fallback: if no relevant sections found, use first 40k chars
-  if (selected.length === 1 && selected[0].length < 1000) {
-    return docText.slice(0, 40000);
+  // Always include the first chunk for context
+  const selected = [chunks[0]?.combined || sections.slice(0, 3000).join('')];
+
+  // Select all chunks with positive relevance score and not purely procedural
+  for (const chunk of chunks) {
+    if (chunk.relevanceScore > 0 && chunk.procedureScore === 0) {
+      selected.push(chunk.header + chunk.body);
+    } else if (chunk.relevanceScore > 0 && chunk.procedureScore > 0) {
+      // Mixed section: include only if it contains actual document keywords beyond the header
+      const bodyLower = chunk.body.toLowerCase();
+      const hasDocKeywords = [
+        'submit', 'attach', 'provide', 'certificate', 'form', 'license', 'permit',
+        'letter', 'document', 'guarantee', 'statement', 'brochure', 'resume', 'lpo', 'lso'
+      ].some(k => bodyLower.includes(k));
+      if (hasDocKeywords) {
+        selected.push(chunk.header + chunk.body);
+      }
+    }
   }
 
-  return selected.join('\n\n---\n\n').slice(0, 80000);
+  const result = selected.join('\n\n---\n\n').slice(0, 80000);
+  if (result.length < 2000) {
+    // Fallback: if we filtered too aggressively, return first 50k chars
+    return docText.slice(0, 50000);
+  }
+  return result;
 }
 
 export async function scanTenderDocument(filePath) {
@@ -206,60 +236,81 @@ async function scanWithOllama(prompt) {
   const url = `${process.env.LLM_OLLAMA_URL || 'http://localhost:11434'}/api/chat`;
   const model = process.env.LLM_OLLAMA_MODEL || 'llama3.1';
 
-  const systemPrompt = `You are a procurement assistant for a Kenyan broadcast/AV company. Extract all required documents, forms, certificates, and attachments from the tender text and return them as a JSON checklist.
+  const systemPrompt = `You are a procurement document analyzer for a Kenyan broadcast/AV company. Your job is to read a tender document and extract every required document, form, certificate, permit, license, or attachment that the bidder must submit. Return ONLY a JSON checklist.
 
-Extract ALL required documents, forms, certificates, permits, licenses, and attachments listed in these three sections (wording may vary):
-1. Evaluation / Qualification / Mandatory / Eligibility Requirements / STAGE 1 (Documents to be submitted)
-2. Technical Evaluation / Technical Proposal / Technical Requirements / STAGE 2 (Technical Requirement)
-3. Financial Evaluation / Financial Proposal / Financial Requirements / STAGE 3
+Scope — extract from these bidder-requirement sections (wording may vary):
+1. Mandatory / Qualification / Eligibility / Evaluation and Qualification / Stage 1 / Documents to be submitted
+2. Technical Evaluation / Technical Proposal / Technical Requirements / Stage 2 / Schedule of Requirements
+3. Financial Evaluation / Financial Proposal / Financial Requirements / Stage 3 / Price Schedules
 
-If the document presents a table with rows such as "No. | Documents to be submitted | Yes/No", create one checklist item for every row in the table. Do not skip rows. Do not merge multiple documents into one item unless they are explicitly grouped together (e.g., "Self-declaration Form SD1 and SD2" may be split into two items).
+Do NOT extract:
+- Evaluation procedures, scoring rules, pass/fail criteria, responsiveness rules, or ranking methods.
+- Instructions about what the Procuring Entity will do (e.g., "The procuring entity shall evaluate...", "The tender opening shall be conducted...").
+- General tender rules, clarifications, negotiations, or award notifications.
 
-Do NOT extract evaluation procedures, scoring rules, pass/fail criteria, tender instructions, or general tender rules. Only extract real documents/forms/certificates/permits/licenses that the bidder must prepare, fill, source, attach, or submit.
+Extraction rules:
+1. Extract one item per listed requirement. If the document has a numbered list or table (e.g., "No. | Documents to be submitted | Yes/No"), create one checklist item for every row. Do not skip rows.
+2. Preserve exact wording and numbers from the document. Do NOT generalize. If it says "Kshs 1,000,000.00 valid 180 days", use that exact amount and period. If it says "CR12 or CR13 or National ID/Passport", capture all alternatives.
+3. If a row lists multiple distinct documents (e.g., "Self-Declaration Form SD1 and SD2"), create one item per distinct document. Do not merge them into a generic item.
+4. If a row says the bidder must submit a document with specific attributes (e.g., "certified", "duly filled, signed and stamped", "original", "within 60 days"), put those attributes in the notes field.
+5. Capture sector-specific requirements: NCA, ERC, KRA, business permits, dealership/manufacturer authorization letters, site visit certificates, technical staff resumes and licenses, LPOs/LSOs/contracts, recommendation letters, etc.
+6. If a requirement is clearly a formatting/assembly rule and not a document to gather (e.g., "tender document must be tape-bound and paginated"), you may still include it under category "other".
+7. If the document does not clearly list specific required documents, return an empty checklist array. Do NOT invent items.
 
-Items to ALWAYS skip:
-- "Tender Opening", "Tender Submission", "Evaluation of Tenders", "Comparison of Tenders", "Tender Price Comparison", "Abnormally Low Tenders", "Abnormally High Tenders", "Unbalanced and/or Front-Loaded Tenders", "Tender Envelope Seal", "Responsiveness Check", "Tender Award Notification", "Clarification", "Correction of Arithmetic Errors", "Negotiations", "Post-qualification".
-
-Key rule: If the text describes what the Procuring Entity will do (e.g. "The procuring entity shall evaluate...", "The tender opening shall be conducted...", "The procuring entity may require..."), do NOT extract it. Only extract text that says what the bidder/tenderer must submit, provide, attach, or include.
-
-If the tender document does not clearly list specific required documents or forms in these sections, return an empty checklist array. Do NOT invent items.
-
-Rules:
-- name: exact document/form name as written in the tender. Do not rename. Create one item per listed document.
+Field rules:
+- name: exact document/form name as written in the tender. Do not rename or shorten.
 - category: one of company_standing, financial, experience, tender_form, technical, it_related, other.
 - is_form: true only if the tender provides a specific pre-printed form to fill. false for supporting documents to be sourced.
-- form_reference: the form code/name if is_form is true, otherwise null.
-- notes: specific requirements (copies, validity, sign/stamp). Empty string if none.
+- form_reference: the form code/name if is_form is true (e.g., "SD1", "BOQ", "BSF"), otherwise null.
+- notes: exact requirements from the text (amount, validity, copies, sign/stamp, source). Preserve numbers. Empty string if none.
 - suggested_assignee_role: comma-separated roles from FL, INFO, FIN, TECH, IT, HOT, ADMIN, GM. Use multiple roles where appropriate.
 
-Categorization rules (be strict):
-- company_standing: company registration, CR12, tax certificates, KRA PIN, business licenses, compliance, stamps, signatures.
-- financial: bank references, audited financial statements, bid security, priced BOQ, financial forms, tax compliance, insurance, tender fees.
-- experience: past performance certificates, reference letters, similar work, CVs, project references.
-- tender_form: pre-printed tender forms supplied by the procuring entity (Tender Submission Form, Bid Security Form, Declaration Form, ELI forms, FIN forms).
-- technical: technical proposal, equipment specs, method statement, work schedule, site visit confirmation, maintenance plan, drawings, test reports.
-- it_related: IT certifications, software licenses, network diagrams, cybersecurity.
-- other: anything that does not fit above.
+Categorization rules:
+- company_standing: Certificate of Incorporation, CR12, CR13, KRA PIN, Tax Compliance Certificate, business permits, Power of Attorney, stamps, signatures.
+- financial: audited accounts, bank reference letters, bid/tender security, guarantees, priced BOQ, price schedules, financial capacity proofs, lines of credit, insurance.
+- experience: past performance certificates, reference letters, LPOs/LSOs/contracts, similar completed projects, recommendation letters.
+- tender_form: pre-printed forms supplied by the procuring entity (Tender Submission Form, Bid Security Form, Self-Declaration Forms, Confidential Business Questionnaire, Independent Tender Determination, Code of Ethics Declaration).
+- technical: technical proposal, method statement, work plan/schedule, equipment brochures/specs, site visit certificate, NCA/ERC licenses, technical staff resumes/certificates, delivery commitment letter, dealership/manufacturer authorization letter, drawings, test reports.
+- it_related: IT certifications, software licenses, network diagrams, cybersecurity certificates.
+- other: anything that does not fit above (e.g., tender document binding/pagination rules).
 
-Section assignment rules:
+Role assignment rules:
 - Mandatory / Qualification documents → INFO, GM, ADMIN
 - Technical documents → TECH, IT, GM, ADMIN
 - Financial documents → FIN, FL, GM, ADMIN
+- Experience proofs → INFO, GM, ADMIN
 
-Example output for a standard tender:
+Example output (must be valid JSON only):
 {
   "checklist": [
     {"name": "Tender Submission Form", "category": "tender_form", "is_form": true, "form_reference": "TSF", "notes": "Duly filled, signed and stamped", "suggested_assignee_role": "INFO,GM,ADMIN"},
-    {"name": "Certificate of Incorporation", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Certified copy, valid", "suggested_assignee_role": "INFO,GM,ADMIN"},
-    {"name": "CR12 Form", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Current (within 6 months)", "suggested_assignee_role": "INFO,GM,ADMIN"},
-    {"name": "KRA Tax Compliance Certificate", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Valid and certified", "suggested_assignee_role": "INFO,GM,ADMIN"},
-    {"name": "Audited Financial Statements", "category": "financial", "is_form": false, "form_reference": null, "notes": "Last 3 years", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
-    {"name": "Bank Reference Letter", "category": "financial", "is_form": false, "form_reference": null, "notes": "From reputable bank, current", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
-    {"name": "Bid Security Form", "category": "tender_form", "is_form": true, "form_reference": "BSF", "notes": "2% of tender sum, valid 120 days", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
-    {"name": "Past Performance Certificate / Reference Letters", "category": "experience", "is_form": false, "form_reference": null, "notes": "At least 3 similar completed projects", "suggested_assignee_role": "INFO,GM,ADMIN"},
-    {"name": "Technical Proposal", "category": "technical", "is_form": false, "form_reference": null, "notes": "Equipment schedule, method statement, work plan", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
-    {"name": "Brochure Supporting Technical Proposal", "category": "technical", "is_form": false, "form_reference": null, "notes": "Manufacturer brochures for proposed equipment", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
-    {"name": "Priced Bill of Quantities", "category": "financial", "is_form": true, "form_reference": "BOQ", "notes": "Signed and priced as per tender schedule", "suggested_assignee_role": "FIN,FL,GM,ADMIN"}
+    {"name": "Certificate of Incorporation / Registration", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Certified copy", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Valid Tax Compliance Certificate", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "KRA", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Valid Single Business Permit", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Issued by county where firm operates", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "CR12 or CR13 or National ID / Passport", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "CR12/CR13 for limited companies; National ID/Passport for sole proprietors/partnerships. Current within 60 days", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Confidential Business Questionnaire", "category": "tender_form", "is_form": true, "form_reference": null, "notes": "Duly filled, signed and stamped", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Certificate of Independent Tender Determination", "category": "tender_form", "is_form": true, "form_reference": null, "notes": "Duly filled, signed and stamped", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Declaration and Commitment to the Code of Ethics", "category": "tender_form", "is_form": true, "form_reference": null, "notes": "Duly filled, signed and stamped", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Self-Declaration Form SD1", "category": "tender_form", "is_form": true, "form_reference": "SD1", "notes": "Duly filled, signed and stamped", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Self-Declaration Form SD2", "category": "tender_form", "is_form": true, "form_reference": "SD2", "notes": "Duly filled, signed and stamped", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Tender Security", "category": "financial", "is_form": false, "form_reference": null, "notes": "Kshs 1,000,000.00 bank guarantee from Kenyan-licensed bank or insurance guarantee from IRA-approved company. Valid 180 days", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
+    {"name": "Certified Audited Accounts", "category": "financial", "is_form": false, "form_reference": null, "notes": "Last 3 years: 2025, 2024, 2023", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
+    {"name": "Power of Attorney", "category": "company_standing", "is_form": false, "form_reference": null, "notes": "Duly filled, certified", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Signed and Stamped Site Visit Certificate", "category": "technical", "is_form": false, "form_reference": null, "notes": "Original", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "Dealership Authorization Letter from Manufacturer", "category": "technical", "is_form": false, "form_reference": null, "notes": "Duly certified", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "NCA 7+ Registration Certificate and Practicing License", "category": "technical", "is_form": false, "form_reference": null, "notes": "National Construction Authority Class 7 and above, Electrical Engineering Services", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "ERC Class A2 License", "category": "technical", "is_form": false, "form_reference": null, "notes": "Energy Regulatory Commission current Class A2", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "Brochures Supporting Mandatory Technical Specifications", "category": "technical", "is_form": false, "form_reference": null, "notes": "For compliance", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "3 LPOs / LSOs / Contract Documents", "category": "experience", "is_form": false, "form_reference": null, "notes": "Supply and delivery/commissioning experience in public or private institutions. Each LPO/LSO/Contract value Kshs 5 Million and above", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "4 Recommendation Letters from Institutions", "category": "experience", "is_form": false, "form_reference": null, "notes": "On client letterhead with contact person, email and telephone", "suggested_assignee_role": "INFO,GM,ADMIN"},
+    {"name": "Letter of Commitment Confirming 60-Day Delivery", "category": "technical", "is_form": false, "form_reference": null, "notes": "From date of signing contract", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "Financial Capacity Proof", "category": "financial", "is_form": false, "form_reference": null, "notes": "Lines of credit (bank letters on overdraft/loan/fixed deposits) + audited financial statements showing average annual turnover KES 50,000,000+", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
+    {"name": "Workplan", "category": "technical", "is_form": false, "form_reference": null, "notes": "", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "5 Detailed Resumes of Technical Staff + Certified Certificates/Licenses", "category": "technical", "is_form": false, "form_reference": null, "notes": "From relevant bodies", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "Technical Proposal", "category": "technical", "is_form": false, "form_reference": null, "notes": "", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "Method Statement", "category": "technical", "is_form": false, "form_reference": null, "notes": "", "suggested_assignee_role": "TECH,IT,GM,ADMIN"},
+    {"name": "Form of Tender", "category": "tender_form", "is_form": true, "form_reference": null, "notes": "Prepared in accordance with ITT 14", "suggested_assignee_role": "FIN,FL,GM,ADMIN"},
+    {"name": "Priced Bill of Quantities / Activity Schedule", "category": "financial", "is_form": true, "form_reference": "BOQ", "notes": "Signed and priced as per tender schedule", "suggested_assignee_role": "FIN,FL,GM,ADMIN"}
   ]
 }`;
 
