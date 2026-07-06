@@ -119,7 +119,7 @@ export async function scanTenderDocument(filePath) {
   console.log(`[scanTenderDocument] First 1000 chars:`, docText.slice(0, 1000));
   console.log(`[scanTenderDocument] Last 1000 chars:`, docText.slice(-1000));
 
-  const prompt = `${EXTRACTION_PROMPT}\n\n--- TENDER DOCUMENT TEXT ---\n${docText.slice(0, 60000)}`;
+  const prompt = `${EXTRACTION_PROMPT}\n\n--- TENDER DOCUMENT TEXT ---\n${docText.slice(0, 150000)}`;
 
   if (provider === 'gemini') {
     return await scanWithGemini(prompt);
