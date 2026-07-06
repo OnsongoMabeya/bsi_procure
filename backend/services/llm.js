@@ -106,6 +106,44 @@ async function extractTextFromFile(filePath) {
   throw new Error(`Unsupported file type: ${ext}. Please upload PDF, .docx, or .doc.`);
 }
 
+function extractRelevantSections(docText) {
+  // Split document into sections by common headers
+  const sectionRegex = /\n\s*(?:Section\s+[IVX]+|PART\s+\d+|\d+\.\s+[A-Z][A-Z\s]+|\b[A-Z][A-Z\s]{3,}[A-Z]\b)\s*\n/;
+  const parts = docText.split(sectionRegex).filter(Boolean);
+  const headers = docText.match(sectionRegex) || [];
+
+  // Keywords that indicate sections containing required documents
+  const relevantKeywords = [
+    'evaluation and qualification', 'qualification criteria', 'mandatory requirement',
+    'eligibility requirement', 'qualification of the tenderer', 'technical evaluation',
+    'technical proposal', 'technical requirement', 'financial evaluation',
+    'financial proposal', 'financial requirement', 'documents to be submitted',
+    'documents required', 'tender submission form', 'bid security', 'declaration',
+    'certificate of incorporation', 'tax compliance', 'audited financial',
+    'bank reference', 'performance certificate', 'technical proposal'
+  ];
+
+  const selected = [];
+  // Always include the first chunk (usually has title/scope)
+  selected.push(parts[0] || '');
+
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i].toLowerCase();
+    const body = parts[i + 1] || '';
+    const combined = (header + ' ' + body.slice(0, 500)).toLowerCase();
+    if (relevantKeywords.some(k => combined.includes(k))) {
+      selected.push(headers[i] + body);
+    }
+  }
+
+  // Fallback: if no relevant sections found, use first 40k chars
+  if (selected.length === 1 && selected[0].length < 1000) {
+    return docText.slice(0, 40000);
+  }
+
+  return selected.join('\n\n---\n\n').slice(0, 50000);
+}
+
 export async function scanTenderDocument(filePath) {
   const provider = (process.env.LLM_PROVIDER || 'ollama').toLowerCase();
 
@@ -114,12 +152,13 @@ export async function scanTenderDocument(filePath) {
     throw new Error('Could not extract sufficient text from the document. It may be a scanned/image PDF — OCR support is coming in Phase 14.');
   }
 
+  const relevantText = extractRelevantSections(docText);
+
   console.log(`[scanTenderDocument] File path: ${filePath}`);
   console.log(`[scanTenderDocument] Extracted text length: ${docText.length} chars`);
-  console.log(`[scanTenderDocument] First 1000 chars:`, docText.slice(0, 1000));
-  console.log(`[scanTenderDocument] Last 1000 chars:`, docText.slice(-1000));
+  console.log(`[scanTenderDocument] Relevant sections length: ${relevantText.length} chars`);
 
-  const prompt = `${EXTRACTION_PROMPT}\n\n--- TENDER DOCUMENT TEXT ---\n${docText.slice(0, 150000)}`;
+  const prompt = `${EXTRACTION_PROMPT}\n\n--- TENDER DOCUMENT TEXT ---\n${relevantText}`;
 
   if (provider === 'gemini') {
     return await scanWithGemini(prompt);
