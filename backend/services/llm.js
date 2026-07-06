@@ -107,20 +107,36 @@ async function extractTextFromFile(filePath) {
 }
 
 function extractRelevantSections(docText) {
-  // Split document into sections by common headers
-  const sectionRegex = /\n\s*(?:Section\s+[IVX]+|PART\s+\d+|\d+\.\s+[A-Z][A-Z\s]+|\b[A-Z][A-Z\s]{3,}[A-Z]\b)\s*\n/;
+  // Split document into sections by common tender headers (including Kenyan STAGE sections)
+  const sectionRegex = /\n\s*(?:Section\s+[IVX]+|PART\s+\d+|STAGE\s+\d+[:\.]?|PHASE\s+\d+[:\.]?|\d+\.\s+[A-Z][A-Z\s]+|\b[A-Z][A-Z\s]{3,}[A-Z]\b)\s*\n/;
   const parts = docText.split(sectionRegex).filter(Boolean);
   const headers = docText.match(sectionRegex) || [];
 
   // Keywords that indicate sections containing required documents
   const relevantKeywords = [
     'evaluation and qualification', 'qualification criteria', 'mandatory requirement',
-    'eligibility requirement', 'qualification of the tenderer', 'technical evaluation',
-    'technical proposal', 'technical requirement', 'financial evaluation',
-    'financial proposal', 'financial requirement', 'documents to be submitted',
-    'documents required', 'tender submission form', 'bid security', 'declaration',
-    'certificate of incorporation', 'tax compliance', 'audited financial',
-    'bank reference', 'performance certificate', 'technical proposal'
+    'eligibility requirement', 'qualification of the tenderer', 'documents to be submitted',
+    'documents required', 'documents required to be submitted', 'mandatory documents',
+    'technical evaluation', 'technical proposal', 'technical requirement', 'technical documents',
+    'financial evaluation', 'financial proposal', 'financial requirement', 'financial documents',
+    'tender submission form', 'bid security', 'tender security', 'declaration',
+    'certificate of incorporation', 'tax compliance', 'tax certificate', 'audited financial',
+    'bank reference', 'performance certificate', 'reference letter', 'power of attorney',
+    'business permit', 'cr12', 'cr13', 'single business', 'confidential business questionnaire',
+    'independent tender determination', 'code of ethics', 'self-declaration', 'site visit',
+    'dealership authorization', 'nca', 'energy regulatory commission', 'erc', 'lines of credit',
+    'workplan', 'resumes', 'brochures', 'lpo', 'lso', 'recommendation letter', 'delivery commitment',
+    'financial capacity', 'turnover', 'method statement', 'schedule of requirements', 'bill of quantities'
+  ];
+
+  // Negative keywords that indicate procedural/evaluation-method sections to skip
+  const procedureKeywords = [
+    'responsiveness', 'only the tenders that meet', 'shall proceed to',
+    'to qualify for financial evaluation', 'the corporation reserves the right',
+    'the following procedure will guide', 'comparison of quoted amounts',
+    'ascertain that', 'market survey report', 'ranking of bids', 'lowest evaluated bid',
+    'evaluation process', 'scoring rules', 'the procuring entity shall',
+    'tender opening', 'tender award', 'clarification', 'negotiation', 'post-qualification'
   ];
 
   const selected = [];
@@ -130,8 +146,11 @@ function extractRelevantSections(docText) {
   for (let i = 0; i < headers.length; i++) {
     const header = headers[i].toLowerCase();
     const body = parts[i + 1] || '';
-    const combined = (header + ' ' + body.slice(0, 500)).toLowerCase();
-    if (relevantKeywords.some(k => combined.includes(k))) {
+    const combined = (header + ' ' + body.slice(0, 800)).toLowerCase();
+    const isRelevant = relevantKeywords.some(k => combined.includes(k));
+    const isProcedure = procedureKeywords.some(k => combined.includes(k)) &&
+      !relevantKeywords.some(k => header.includes(k) && k !== 'financial evaluation' && k !== 'technical evaluation');
+    if (isRelevant && !isProcedure) {
       selected.push(headers[i] + body);
     }
   }
@@ -141,7 +160,7 @@ function extractRelevantSections(docText) {
     return docText.slice(0, 40000);
   }
 
-  return selected.join('\n\n---\n\n').slice(0, 50000);
+  return selected.join('\n\n---\n\n').slice(0, 80000);
 }
 
 export async function scanTenderDocument(filePath) {
@@ -189,12 +208,14 @@ async function scanWithOllama(prompt) {
 
   const systemPrompt = `You are a procurement assistant for a Kenyan broadcast/AV company. Extract all required documents, forms, certificates, and attachments from the tender text and return them as a JSON checklist.
 
-ONLY extract real documents/forms from these three sections (wording may vary):
-1. Evaluation / Qualification / Mandatory / Eligibility Requirements
-2. Technical Evaluation / Technical Proposal / Technical Requirements
-3. Financial Evaluation / Financial Proposal / Financial Requirements
+Extract ALL required documents, forms, certificates, permits, licenses, and attachments listed in these three sections (wording may vary):
+1. Evaluation / Qualification / Mandatory / Eligibility Requirements / STAGE 1 (Documents to be submitted)
+2. Technical Evaluation / Technical Proposal / Technical Requirements / STAGE 2 (Technical Requirement)
+3. Financial Evaluation / Financial Proposal / Financial Requirements / STAGE 3
 
-Do NOT extract evaluation procedures, scoring rules, tender instructions, or general tender rules. Only extract real documents/forms that the bidder must prepare, fill, or source.
+If the document presents a table with rows such as "No. | Documents to be submitted | Yes/No", create one checklist item for every row in the table. Do not skip rows. Do not merge multiple documents into one item unless they are explicitly grouped together (e.g., "Self-declaration Form SD1 and SD2" may be split into two items).
+
+Do NOT extract evaluation procedures, scoring rules, pass/fail criteria, tender instructions, or general tender rules. Only extract real documents/forms/certificates/permits/licenses that the bidder must prepare, fill, source, attach, or submit.
 
 Items to ALWAYS skip:
 - "Tender Opening", "Tender Submission", "Evaluation of Tenders", "Comparison of Tenders", "Tender Price Comparison", "Abnormally Low Tenders", "Abnormally High Tenders", "Unbalanced and/or Front-Loaded Tenders", "Tender Envelope Seal", "Responsiveness Check", "Tender Award Notification", "Clarification", "Correction of Arithmetic Errors", "Negotiations", "Post-qualification".
@@ -264,22 +285,32 @@ Example output for a standard tender:
     required: ['checklist'],
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      stream: false,
-      format: checklistSchema,
-      options: {
-        temperature: 0.1,
-      },
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutMs = 240000; // 4 minutes
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res;
+  try {
+    res = await fetch(url, {
+      signal: controller.signal,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        stream: false,
+        format: checklistSchema,
+        options: {
+          temperature: 0.1,
+        },
+      }),
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     const body = await res.text();
