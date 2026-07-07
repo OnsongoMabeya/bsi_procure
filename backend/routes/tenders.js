@@ -56,6 +56,32 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ── My Tasks: assigned items across active tenders ────────────────────────────
+router.get('/my-tasks', async (req, res) => {
+  try {
+    const activeStatuses = ['PENDING_FEASIBILITY', 'DOCUMENT_GATHERING', 'ASSEMBLY', 'SUBMITTED'];
+    const where = {
+      status: { [Op.in]: activeStatuses },
+      is_archived: false,
+    };
+    const items = await ChecklistItem.findAll({
+      where: checklistWhere(req.user),
+      include: [
+        { model: Tender, where, attributes: ['id', 'name', 'reference_number', 'procuring_entity', 'deadline', 'status'] },
+        { model: User, as: 'assignee', attributes: ['id', 'name', 'role'] },
+        { model: User, as: 'uploader', attributes: ['id', 'name', 'role'] },
+      ],
+      order: [
+        [Tender, 'deadline', 'ASC'],
+        ['order_index', 'ASC'],
+      ],
+    });
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Get single tender ─────────────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
@@ -342,34 +368,6 @@ router.patch('/:id/checklist/:itemId/reject', requireRole(...CAN_REVIEW), async 
     if (!['UPLOADED', 'APPROVED'].includes(item.status)) return res.status(400).json({ error: 'Only uploaded or approved items can be rejected' });
     await item.update({ status: 'REJECTED', reviewer_notes });
     res.json(item);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── My Tasks: assigned items across active tenders ────────────────────────────
-router.get('/my-tasks', async (req, res) => {
-  try {
-    const activeStatuses = ['PENDING_FEASIBILITY', 'DOCUMENT_GATHERING', 'ASSEMBLY', 'SUBMITTED'];
-    const where = {
-      status: { [Op.in]: activeStatuses },
-      is_archived: false,
-    };
-    const items = await ChecklistItem.findAll({
-      where: {
-        ...checklistWhere(req.user),
-      },
-      include: [
-        { model: Tender, where, attributes: ['id', 'name', 'reference_number', 'procuring_entity', 'deadline', 'status'] },
-        { model: User, as: 'assignee', attributes: ['id', 'name', 'role'] },
-        { model: User, as: 'uploader', attributes: ['id', 'name', 'role'] },
-      ],
-      order: [
-        [Tender, 'deadline', 'ASC'],
-        ['order_index', 'ASC'],
-      ],
-    });
-    res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
