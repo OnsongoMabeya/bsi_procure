@@ -6,7 +6,8 @@ import mammoth from 'mammoth';
 import WordExtractor from 'word-extractor';
 
 const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+const pdfParseModule = require('pdf-parse');
+const pdfParse = typeof pdfParseModule === 'function' ? pdfParseModule : (pdfParseModule.default || pdfParseModule.parse);
 
 const EXTRACTION_PROMPT = `You are a procurement document analyst for Broadcast Solutions International (BSI), a Kenyan broadcast and AV technology company.
 
@@ -80,8 +81,18 @@ async function extractTextFromFile(filePath) {
   }
 
   if (ext === '.pdf') {
-    const data = await pdfParse(buffer);
-    return data.text;
+    try {
+      if (typeof pdfParse !== 'function') {
+        throw new Error('PDF parser module is not available (not a function).');
+      }
+      const data = await pdfParse(buffer);
+      if (!data || !data.text) {
+        throw new Error('PDF parser returned empty text; the PDF may be scanned images or corrupted.');
+      }
+      return data.text;
+    } catch (err) {
+      throw new Error(`Could not read PDF ${filename}: ${err.message}. If it is a scanned/image PDF, OCR support is coming in Phase 14.`);
+    }
   }
 
   if (ext === '.docx') {
