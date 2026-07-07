@@ -190,7 +190,7 @@ This file records what was built in each phase, what decisions were made, and wh
 
 ---
 
-## Phase 4 — AI Checklist Extraction ✅
+## Phase 4 — AI Checklist Extraction (Gemini + Ollama) ✅
 **Date completed:** 2026-06-24
 
 ### What was built
@@ -199,11 +199,11 @@ This file records what was built in each phase, what decisions were made, and wh
 - **`backend/models/ChecklistItem.js`** — Sequelize model: `id`, `tender_id`, `name`, `category` (ENUM), `is_form`, `form_reference`, `notes`, `suggested_assignee_role`, `assigned_to`, `status` (ENUM: PENDING/IN_PROGRESS/UPLOADED/APPROVED/REJECTED), `order_index`
 - **`backend/models/Tender.js`** — added `checklist_confirmed` boolean field
 - **`backend/services/llm.js`** — LLM abstraction service:
-  - Reads `LLM_PROVIDER` env var (default: `gemini`)
-  - Extracts text from PDF via `pdf-parse`, DOCX via `mammoth`
-  - Sends extracted text + extraction prompt to Gemini 2.0 Flash
+  - Reads `LLM_PROVIDER` env var (default: `ollama` in Docker, `gemini` if no config)
+  - Extracts text from PDF via `pdf-parse`, DOCX via `mammoth`, DOC via `word-extractor`
+  - Sends extracted text + extraction prompt to the configured provider (Gemini 2.0 Flash or local Ollama)
   - Parses JSON response, validates `checklist` array
-  - Truncates to 60,000 chars to stay within context window
+  - Truncates to relevant sections (up to 80,000 chars) to stay within context window
 - **`backend/routes/ai.js`** — `POST /api/ai/scan-tender/:tenderId` (FL, INFO, ADMIN):
   - Validates tender status is `DOCUMENT_GATHERING`
   - Calls `scanTenderDocument`, wipes old checklist items, bulk-inserts new ones
@@ -219,8 +219,8 @@ This file records what was built in each phase, what decisions were made, and wh
 - **`frontend/src/components/ChecklistPanel.jsx`** — full checklist management component:
   - "✨ Scan with AI" button → calls AI scan endpoint, replaces checklist
   - Items grouped by category (Tender Forms, Company Standing, Financial, Experience, Technical, IT, Other)
-  - Per-item: name, form tag (FORM badge + reference), notes, assignee name+role, status badge
-  - Inline edit form per item: name, category, assign user (dropdown of all users), suggested role, notes
+  - Per-item: name, form tag (FORM badge + reference), notes, assignee name+role(s), status badge
+  - Inline edit form per item: name, category, assign user (dropdown of all users), suggested roles (multi-role checkbox group), notes
   - Add item manually form
   - Delete button per item (with confirm dialog)
   - "✔ Confirm Checklist" button → sets `checklist_confirmed`, shows locked banner
@@ -228,9 +228,9 @@ This file records what was built in each phase, what decisions were made, and wh
 - **`frontend/src/pages/TenderDetailPage.jsx`** — ChecklistPanel mounted below feasibility section when tender status is `DOCUMENT_GATHERING`, `ASSEMBLY`, or `SUBMITTED`
 
 ### Decisions made
-- **Text extraction** (not native PDF bytes) sent to Gemini — avoids Google File API complexity; works well for native PDFs. Scanned/image PDFs need OCR — deferred to Phase 14.
-- **Gemini 2.0 Flash** as the model — balances speed, cost, and accuracy for procurement documents
-- **60,000 char truncation** — stays within Gemini's context window comfortably for typical tender docs
+- **Text extraction** (not native PDF bytes) sent to the LLM — avoids Google File API complexity; works well for native PDFs/DOCX. Scanned/image PDFs need OCR — deferred to Phase 14.
+- **Default provider is Ollama (llama3.1)** in Docker; **Gemini 2.0 Flash** available via one-line config change.
+- **Relevant-section extraction** — selects the mandatory/technical/financial sections before sending to the LLM, up to 80,000 chars, instead of truncating the whole document.
 - **Scan replaces existing checklist** — with a confirmation dialog, so re-running is safe
 - **Checklist confirmation is a soft lock** — UI hides edit controls; no hard DB constraint so ADMIN can still patch via API if needed
 
@@ -248,7 +248,7 @@ LLM_PROVIDER=ollama
 LLM_OLLAMA_URL=http://ollama:11434
 LLM_OLLAMA_MODEL=llama3.1
 ```
-Ollama is bundled in Docker Compose. On first start it downloads the model (~4.7 GB) and caches it.
+Ollama is bundled in Docker Compose. On first start it downloads the model (~4.7 GB) and caches it. For GPU acceleration on macOS, point at host Ollama with `LLM_OLLAMA_URL=http://host.docker.internal:11434`.
 
 **Option B — Google Gemini:**
 ```env
@@ -256,6 +256,56 @@ LLM_PROVIDER=gemini
 LLM_API_KEY=your-gemini-api-key-here
 ```
 Get a free Gemini API key at <https://aistudio.google.com/apikey>
+
+---
+
+## Phase 4 — AI Extraction Hardening (Follow-up) ✅
+**Date completed:** 2026-07-07
+
+### What was built / refined
+
+#### Backend
+- **`backend/services/llm.js`** — now a true multi-provider abstraction:
+  - `scanWithGemini()` for Google Gemini (original provider).
+  - `scanWithOllama()` for local Ollama, with:
+    - JSON schema mode via `format: checklistSchema` for structured output.
+    - 4-minute `AbortController` timeout to prevent indefinite scans.
+    - Raw response logging before parsing for debugging.
+    - Markdown code-block and top-level-array JSON parsing fallbacks.
+  - `extractRelevantSections()` — keyword-window section extractor that works across tender formats (Kenyan STAGE headers, numbered lists, tables) instead of brittle header-only splitting.
+  - Text window expanded from 60,000 to **80,000 chars of relevant sections**.
+- **Prompt hardening** in `scanWithOllama` system prompt:
+  - Explicit row-by-row table extraction rules.
+  - Sector-specific license/permit keywords (NCA, ERC, KRA, business permits, dealership letters).
+  - Experience-proof capture (LPOs, LSOs, contracts, recommendation letters).
+  - Exact numeric preservation rule (amounts, validity periods, days).
+  - Anti-hallucination guard: only extract documents the bidder must submit; skip evaluation procedures and procuring-entity actions.
+- **Role model updates** in `backend/models/ChecklistItem.js`:
+  - `suggested_assignee_role` widened to `VARCHAR(100)` to support comma-separated multi-role strings (e.g., `TECH,IT,GM,ADMIN`).
+- **Route normalization** in `backend/routes/tenders.js` and `backend/routes/ai.js`:
+  - `normalizeRole()` now validates and accepts comma-separated roles.
+  - AI scan applies procedure-item filter to drop known procedural hallucinations before saving.
+- **PDF parsing fix**:
+  - Switched `backend/package.json` to standard `pdf-parse@1.1.1`.
+  - Added robust import fallback and defensive error handling for scanned/image PDFs.
+
+#### Frontend
+- **`frontend/src/components/ChecklistPanel.jsx`**:
+  - Multi-role selection UI (checkbox groups) replacing single-role dropdowns.
+  - `GM` role added to the role list.
+  - Multi-role chips displayed per checklist item.
+
+### Decisions made
+- **Default provider is Ollama in Docker**, with an optional switch to host Ollama (`http://host.docker.internal:11434`) for GPU-accelerated scans on macOS.
+- **Gemini remains a one-line config change** via `LLM_PROVIDER=gemini` + `LLM_API_KEY`.
+- **Multi-role assignments** replace single-role suggestions because many tender documents require cross-functional input (e.g., technical + IT + GM).
+- **Relevant-section extraction** is preferred over sending the whole document — reduces noise, improves focus, and lowers LLM context usage.
+- **Scan still replaces the existing checklist** — confirmed safe; re-running is the primary way to regenerate after prompt improvements.
+
+### Intentionally stubbed / deferred
+- OCR for scanned/image-only PDFs → Phase 14
+- OpenAI / Anthropic cloud providers → Phase 14 (Ollama is now the default local fallback)
+- WhatsApp/in-app notifications on checklist confirmation → Phase 12
 
 ---
 
@@ -289,20 +339,20 @@ docker compose exec backend npm run setup
 
 ## Phase Status Summary
 
-| Phase | Name                                 | Status       | What it delivered                                                |
-| ----- | ------------------------------------ | ------------ | ---------------------------------------------------------------- |
-| 0     | Scaffolding                          | ✅ Complete  | Monorepo, Express + React + Vite, MySQL, health route            |
-| 1     | Auth & Roles                         | ✅ Complete  | JWT login, 9 roles, RBAC middleware, ADMIN user CRUD             |
-| 2     | Core Layout & Navigation             | ✅ Complete  | Sidebar, topbar, 8 placeholder pages, role-filtered nav          |
-| 3     | Tender Intake & Feasibility          | ✅ Complete  | `tenders` table, file upload, GM/HOT feasibility approval flow   |
-| 4     | AI Checklist Extraction              | ✅ Complete  | Gemini integration, checklist saved to DB, FL/INFO review/edit   |
-| 5     | Document Gathering & My Tasks        | ⏳ Next      | Checklist item statuses, per-item upload, My Tasks view          |
-| 6     | Company Documents & Profile          | ⏳ Pending   | Stamp/signature/cert library, BSI profile seed data              |
-| 7     | Form Filling Engine                  | ⏳ Pending   | Overlay editor, auto-fill from profile, flattened PDF output     |
-| 8     | Signatures & Stamps                  | ⏳ Pending   | Drag-and-place assets, flatten + immutable audit log             |
-| 9     | Document Assembly & Ordering         | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                    |
-| 10    | Page Serialization                   | ⏳ Pending   | 6-digit page stamp, physical-submission toggle                   |
-| 11    | Final Submission                     | ⏳ Pending   | Merge to PDF (physical) or named ZIP (digital), immutable record |
-| 12    | WhatsApp Alerts                      | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell        |
-| 13    | Past Tenders & Archive               | ⏳ Pending   | Searchable archive, full audit log view                          |
-| 14    | Polish & Hardening                   | ⏳ Pending   | Error handling, mobile responsiveness, security review           |
+| Phase | Name                                                  | Status       | What it delivered                                                       |
+| ----- | ----------------------------------------------------- | ------------ | ----------------------------------------------------------------------- |
+| 0     | Scaffolding                                           | ✅ Complete  | Monorepo, Express + React + Vite, MySQL, health route                   |
+| 1     | Auth & Roles                                          | ✅ Complete  | JWT login, 9 roles, RBAC middleware, ADMIN user CRUD                    |
+| 2     | Core Layout & Navigation                              | ✅ Complete  | Sidebar, topbar, 8 placeholder pages, role-filtered nav                 |
+| 3     | Tender Intake & Feasibility                           | ✅ Complete  | `tenders` table, file upload, GM/HOT feasibility approval flow          |
+| 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  | Gemini + Ollama providers, multi-role assignment, checklist review/edit |
+| 5     | Document Gathering & My Tasks                         | ⏳ Next      | Checklist item statuses, per-item upload, My Tasks view                 |
+| 6     | Company Documents & Profile                           | ⏳ Pending   | Stamp/signature/cert library, BSI profile seed data                     |
+| 7     | Form Filling Engine                                   | ⏳ Pending   | Overlay editor, auto-fill from profile, flattened PDF output            |
+| 8     | Signatures & Stamps                                   | ⏳ Pending   | Drag-and-place assets, flatten + immutable audit log                    |
+| 9     | Document Assembly & Ordering                          | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                           |
+| 10    | Page Serialization                                    | ⏳ Pending   | 6-digit page stamp, physical-submission toggle                          |
+| 11    | Final Submission                                      | ⏳ Pending   | Merge to PDF (physical) or named ZIP (digital), immutable record        |
+| 12    | WhatsApp Alerts                                       | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell               |
+| 13    | Past Tenders & Archive                                | ⏳ Pending   | Searchable archive, full audit log view                                 |
+| 14    | Polish & Hardening                                    | ⏳ Pending   | Error handling, mobile responsiveness, security review                  |

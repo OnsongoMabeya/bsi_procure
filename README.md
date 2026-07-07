@@ -81,7 +81,11 @@ docker compose up --build -d    # rebuild after code changes
 
 ### AI / LLM setup
 
-By default the app bundles **Ollama** (a free, local LLM runner) inside Docker Compose.
+The AI checklist scanner supports two providers: **Ollama** (free, local) and **Google Gemini** (cloud). Configure it in `backend/.env`.
+
+#### Option A — Ollama (default, no API cost)
+
+Docker Compose includes an **Ollama service** (`bsi_ollama`) that runs the model inside a container. It uses CPU by default, so scans can be slow.
 
 ```env
 # backend/.env
@@ -90,7 +94,7 @@ LLM_OLLAMA_URL=http://ollama:11434
 LLM_OLLAMA_MODEL=llama3.1
 ```
 
-The default model is `llama3.1` (fast, capable, permissive license). On first start the Ollama container downloads the model — this may take several minutes depending on your connection. The model is cached in a Docker volume, so subsequent restarts are fast.
+On first start the Ollama container downloads the model (~4.7 GB) and caches it in a Docker volume. Subsequent restarts are fast.
 
 To use a different free model, change `LLM_OLLAMA_MODEL` to any model from <https://ollama.com/library> (e.g. `mistral`, `qwen2.5`, `gemma2`) and restart:
 
@@ -99,7 +103,17 @@ docker compose down
 docker compose up --build -d
 ```
 
-To use **Google Gemini** instead, set `LLM_PROVIDER=gemini` and add your API key from <https://aistudio.google.com/apikey>:
+For much faster scans on macOS (or any host with a GPU), run Ollama **on the host machine** instead of inside Docker and point the backend at it:
+
+```env
+LLM_OLLAMA_URL=http://host.docker.internal:11434
+```
+
+This avoids the CPU-only container and uses the host's GPU acceleration. The Docker Ollama service will still start but is not used in this configuration.
+
+#### Option B — Google Gemini
+
+Set `LLM_PROVIDER=gemini` and add your API key from <https://aistudio.google.com/apikey>:
 
 ```env
 LLM_PROVIDER=gemini
@@ -110,23 +124,23 @@ LLM_API_KEY=your-gemini-key-here
 
 The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept local-only, not pushed to GitHub).
 
-| Phase | Name                                | Status                              |
-|-------|-------------------------------------|-------------------------------------|
-| 0     | Scaffolding                         | ✅ Complete                         |
-| 1     | Auth & Roles                        | ✅ Complete                         |
-| 2     | Core Layout & Navigation            | ✅ Complete                         |
-| 3     | Tender Intake & Feasibility         | ✅ Complete                         |
-| 4     | AI Checklist Extraction             | ✅ Complete                         |
-| 5     | Document Gathering & My Tasks       | ⏳ Next                             |
-| 6     | Company Documents & Company Profile | ⏳ Pending                          |
-| 7     | Form Filling Engine                 | ⏳ Pending                          |
-| 8     | Signatures & Stamps                 | ⏳ Pending                          |
-| 9     | Document Assembly & Ordering        | ⏳ Pending                          |
-| 10    | Page Serialization                  | ⏳ Pending                          |
-| 11    | Final Submission                    | ⏳ Pending                          |
-| 12    | WhatsApp Alerts                     | ⏳ Pending                          |
-| 13    | Past Tenders & Audit Archive        | ⏳ Pending                          |
-| 14    | Polish & Hardening                  | ⏳ Pending                          |
+| Phase | Name                                                  | Status       |
+|-------|-------------------------------------------------------|--------------|
+| 0     | Scaffolding                                           | ✅ Complete  |
+| 1     | Auth & Roles                                          | ✅ Complete  |
+| 2     | Core Layout & Navigation                              | ✅ Complete  |
+| 3     | Tender Intake & Feasibility                           | ✅ Complete  |
+| 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  |
+| 5     | Document Gathering & My Tasks                         | ⏳ Next      |
+| 6     | Company Documents & Company Profile                   | ⏳ Pending   |
+| 7     | Form Filling Engine                                   | ⏳ Pending   |
+| 8     | Signatures & Stamps                                   | ⏳ Pending   |
+| 9     | Document Assembly & Ordering                          | ⏳ Pending   |
+| 10    | Page Serialization                                    | ⏳ Pending   |
+| 11    | Final Submission                                      | ⏳ Pending   |
+| 12    | WhatsApp Alerts                                       | ⏳ Pending   |
+| 13    | Past Tenders & Audit Archive                          | ⏳ Pending   |
+| 14    | Polish & Hardening                                    | ⏳ Pending   |
 
 ## Environment variables
 
