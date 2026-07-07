@@ -240,6 +240,20 @@ router.post('/:id/checklist', requireRole('FL', 'INFO', 'ADMIN'), async (req, re
   }
 });
 
+// ── Confirm checklist (FL or INFO) ────────────────────────────────────────────
+router.patch('/:id/checklist/confirm', requireRole('FL', 'INFO', 'ADMIN'), async (req, res) => {
+  try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) return res.status(404).json({ error: 'Tender not found' });
+    const count = await ChecklistItem.count({ where: { tender_id: req.params.id } });
+    if (count === 0) return res.status(400).json({ error: 'Cannot confirm an empty checklist' });
+    await tender.update({ checklist_confirmed: true });
+    res.json({ message: 'Checklist confirmed', checklist_confirmed: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Edit checklist item ───────────────────────────────────────────────────────
 router.patch('/:id/checklist/:itemId', requireRole('FL', 'INFO', 'ADMIN'), async (req, res) => {
   try {
@@ -260,20 +274,6 @@ router.delete('/:id/checklist/:itemId', requireRole('FL', 'INFO', 'ADMIN'), asyn
     if (!item) return res.status(404).json({ error: 'Checklist item not found' });
     await item.destroy();
     res.json({ message: 'Item deleted' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── Confirm checklist (FL or INFO) ────────────────────────────────────────────
-router.patch('/:id/checklist/confirm', requireRole('FL', 'INFO', 'ADMIN'), async (req, res) => {
-  try {
-    const tender = await Tender.findByPk(req.params.id);
-    if (!tender) return res.status(404).json({ error: 'Tender not found' });
-    const count = await ChecklistItem.count({ where: { tender_id: req.params.id } });
-    if (count === 0) return res.status(400).json({ error: 'Cannot confirm an empty checklist' });
-    await tender.update({ checklist_confirmed: true });
-    res.json({ message: 'Checklist confirmed', checklist_confirmed: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
