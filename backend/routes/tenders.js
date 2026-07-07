@@ -85,12 +85,12 @@ router.get('/my-tasks', async (req, res) => {
     const items = await ChecklistItem.findAll({
       where: checklistWhere(req.user),
       include: [
-        { model: Tender, where, attributes: ['id', 'name', 'reference_number', 'procuring_entity', 'deadline', 'status'] },
+        { model: Tender, as: 'tender', where, attributes: ['id', 'name', 'reference_number', 'procuring_entity', 'deadline', 'status'] },
         { model: User, as: 'assignee', attributes: ['id', 'name', 'role'] },
         { model: User, as: 'uploader', attributes: ['id', 'name', 'role'] },
       ],
       order: [
-        [Tender, 'deadline', 'ASC'],
+        ['tender', 'deadline', 'ASC'],
         ['order_index', 'ASC'],
       ],
     });

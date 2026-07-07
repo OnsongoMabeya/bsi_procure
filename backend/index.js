@@ -16,7 +16,7 @@ User.hasMany(Tender, { foreignKey: 'uploaded_by', as: 'createdTenders' });
 Tender.belongsTo(User, { foreignKey: 'uploaded_by', as: 'creator' });
 Tender.belongsTo(User, { foreignKey: 'feasibility_approved_by', as: 'approver' });
 Tender.hasMany(ChecklistItem, { foreignKey: 'tender_id', as: 'checklistItems' });
-ChecklistItem.belongsTo(Tender, { foreignKey: 'tender_id' });
+ChecklistItem.belongsTo(Tender, { foreignKey: 'tender_id', as: 'tender' });
 ChecklistItem.belongsTo(User, { foreignKey: 'assigned_to', as: 'assignee' });
 ChecklistItem.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 
