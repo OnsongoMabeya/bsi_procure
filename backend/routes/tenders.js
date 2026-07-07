@@ -82,6 +82,9 @@ router.get('/my-tasks', async (req, res) => {
       status: { [Op.in]: activeStatuses },
       is_archived: false,
     };
+    if (!canSeeFullChecklist(req.user)) {
+      where.checklist_confirmed = true;
+    }
     const items = await ChecklistItem.findAll({
       where: checklistWhere(req.user),
       include: [
@@ -221,6 +224,9 @@ router.get('/:id/checklist', async (req, res) => {
   try {
     const tender = await Tender.findByPk(req.params.id);
     if (!tender) return res.status(404).json({ error: 'Tender not found' });
+    if (!canSeeFullChecklist(req.user) && !tender.checklist_confirmed) {
+      return res.json([]);
+    }
     const items = await ChecklistItem.findAll({
       where: { tender_id: req.params.id, ...checklistWhere(req.user) },
       include: [
@@ -305,6 +311,9 @@ router.post('/:id/checklist/:itemId/upload', (req, res) => {
     try {
       const tender = await Tender.findByPk(req.params.id);
       if (!tender) return res.status(404).json({ error: 'Tender not found' });
+      if (!canSeeFullChecklist(req.user) && !tender.checklist_confirmed) {
+        return res.status(403).json({ error: 'Checklist has not been confirmed yet' });
+      }
       const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
       if (!item) return res.status(404).json({ error: 'Checklist item not found' });
       if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id && !isSuggestedForUser(item, req.user)) {
@@ -333,6 +342,11 @@ router.post('/:id/checklist/:itemId/upload', (req, res) => {
 // ── Start working on item ─────────────────────────────────────────────────────
 router.patch('/:id/checklist/:itemId/start', async (req, res) => {
   try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) return res.status(404).json({ error: 'Tender not found' });
+    if (!canSeeFullChecklist(req.user) && !tender.checklist_confirmed) {
+      return res.status(403).json({ error: 'Checklist has not been confirmed yet' });
+    }
     const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
     if (!item) return res.status(404).json({ error: 'Checklist item not found' });
     if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id && !isSuggestedForUser(item, req.user)) {
@@ -351,6 +365,11 @@ router.patch('/:id/checklist/:itemId/start', async (req, res) => {
 // ── Mark item as uploaded (no file) ───────────────────────────────────────────
 router.patch('/:id/checklist/:itemId/submit', async (req, res) => {
   try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) return res.status(404).json({ error: 'Tender not found' });
+    if (!canSeeFullChecklist(req.user) && !tender.checklist_confirmed) {
+      return res.status(403).json({ error: 'Checklist has not been confirmed yet' });
+    }
     const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
     if (!item) return res.status(404).json({ error: 'Checklist item not found' });
     if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id && !isSuggestedForUser(item, req.user)) {
