@@ -309,6 +309,49 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 ---
 
+## Phase 5 — Document Gathering & My Tasks ✅
+**Date completed:** 2026-07-07
+
+### What was built
+
+#### Backend
+- **`backend/models/ChecklistItem.js`** — added document fields:
+  - `uploaded_document_path`, `uploaded_document_name`, `uploaded_by`, `uploaded_at`, `reviewer_notes`
+- **`backend/middleware/upload.js`** — new `uploadChecklistDoc` middleware accepting PDF, JPG, PNG, DOCX, XLSX up to 50 MB, stored in `uploads/checklist_items/`
+- **`backend/index.js`** — added `ChecklistItem` → `User` (`uploaded_by`) association
+- **`backend/routes/tenders.js`**:
+  - `GET /api/tenders/:id/checklist` now enforces visibility: CEO/GM/FL/INFO/ADMIN see all; others see only assigned items
+  - `POST /api/tenders/:id/checklist/:itemId/upload` — upload/replace document → status `UPLOADED`
+  - `PATCH /api/tenders/:id/checklist/:itemId/start` — set status `IN_PROGRESS`
+  - `PATCH /api/tenders/:id/checklist/:itemId/submit` — set status `UPLOADED` without file
+  - `PATCH /api/tenders/:id/checklist/:itemId/approve` — FL/INFO/ADMIN only
+  - `PATCH /api/tenders/:id/checklist/:itemId/reject` — FL/INFO/ADMIN only, requires reviewer notes
+  - `GET /api/tenders/my-tasks` — assigned items across active tenders, grouped by tender deadline
+
+#### Frontend
+- **`frontend/src/pages/MyTasksPage.jsx`** — full replacement of placeholder:
+  - Items grouped by tender with deadline countdown
+  - Per-item: category, status badge, assignee, notes, uploaded file link
+  - Actions: Start, Upload, Mark uploaded, Approve, Reject (with reviewer notes)
+  - Empty state and flash messages
+- **`frontend/src/components/ChecklistPanel.jsx`**:
+  - Added Start / Upload / Mark uploaded / Approve / Reject buttons per item
+  - Shows uploaded file link and rejection notes
+  - Review actions visible to FL/INFO/ADMIN
+
+### Decisions made
+- **Status workflow** stays strict: `PENDING → IN_PROGRESS → UPLOADED → APPROVED|REJECTED`. Rejected items return to `IN_PROGRESS` via Start.
+- **Upload directory** separated from tender source documents (`uploads/checklist_items/`) for cleaner file organization.
+- **Reviewers can approve/reject any uploaded item** regardless of assignment — matches the FL/INFO oversight role.
+- **Form items use manual upload fallback** for Phase 5; overlay editor deferred to Phase 7.
+
+### Intentionally stubbed / deferred
+- WhatsApp/in-app notifications on status change → Phase 12
+- Overlay form filling → Phase 7
+- Document library / company documents → Phase 6
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts
@@ -346,8 +389,8 @@ docker compose exec backend npm run setup
 | 2     | Core Layout & Navigation                              | ✅ Complete  | Sidebar, topbar, 8 placeholder pages, role-filtered nav                 |
 | 3     | Tender Intake & Feasibility                           | ✅ Complete  | `tenders` table, file upload, GM/HOT feasibility approval flow          |
 | 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  | Gemini + Ollama providers, multi-role assignment, checklist review/edit |
-| 5     | Document Gathering & My Tasks                         | ⏳ Next      | Checklist item statuses, per-item upload, My Tasks view                 |
-| 6     | Company Documents & Profile                           | ⏳ Pending   | Stamp/signature/cert library, BSI profile seed data                     |
+| 5     | Document Gathering & My Tasks                         | ✅ Complete  | Checklist item statuses, per-item upload, My Tasks view                 |
+| 6     | Company Documents & Profile                           | ⏳ Next      | Stamp/signature/cert library, BSI profile seed data                     |
 | 7     | Form Filling Engine                                   | ⏳ Pending   | Overlay editor, auto-fill from profile, flattened PDF output            |
 | 8     | Signatures & Stamps                                   | ⏳ Pending   | Drag-and-place assets, flatten + immutable audit log                    |
 | 9     | Document Assembly & Ordering                          | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                           |

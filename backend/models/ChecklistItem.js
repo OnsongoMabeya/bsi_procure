@@ -45,6 +45,26 @@ const ChecklistItem = sequelize.define('ChecklistItem', {
     defaultValue: 'PENDING',
     allowNull: false,
   },
+  uploaded_document_path: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+  },
+  uploaded_document_name: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  uploaded_by: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: true,
+  },
+  uploaded_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  reviewer_notes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   order_index: {
     type: DataTypes.INTEGER.UNSIGNED,
     defaultValue: 0,

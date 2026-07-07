@@ -1,6 +1,7 @@
 import { Router } from 'express';
+import { Op } from 'sequelize';
 import { authMiddleware, requireRole } from '../middleware/auth.js';
-import { uploadTenderDoc } from '../middleware/upload.js';
+import { uploadTenderDoc, uploadChecklistDoc } from '../middleware/upload.js';
 import Tender from '../models/Tender.js';
 import User from '../models/User.js';
 import ChecklistItem from '../models/ChecklistItem.js';
@@ -21,6 +22,21 @@ router.use(authMiddleware);
 
 const CAN_CREATE = ['GM', 'HOT', 'CEO', 'ADMIN'];
 const CAN_APPROVE = ['GM', 'HOT'];
+const CAN_REVIEW = ['FL', 'INFO', 'ADMIN'];
+const CAN_SEE_FULL_CHECKLIST = ['CEO', 'GM', 'FL', 'INFO', 'ADMIN'];
+
+function canReview(user) {
+  return CAN_REVIEW.includes(user?.role);
+}
+
+function canSeeFullChecklist(user) {
+  return CAN_SEE_FULL_CHECKLIST.includes(user?.role);
+}
+
+function checklistWhere(user) {
+  if (canSeeFullChecklist(user)) return {};
+  return { assigned_to: user.id };
+}
 
 // ── List tenders ──────────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
@@ -159,9 +175,14 @@ router.patch('/:id/document', requireRole('ADMIN', 'FL', 'INFO'), (req, res) => 
 // ── Get checklist ─────────────────────────────────────────────────────────────
 router.get('/:id/checklist', async (req, res) => {
   try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) return res.status(404).json({ error: 'Tender not found' });
     const items = await ChecklistItem.findAll({
-      where: { tender_id: req.params.id },
-      include: [{ model: User, as: 'assignee', attributes: ['id', 'name', 'role'] }],
+      where: { tender_id: req.params.id, ...checklistWhere(req.user) },
+      include: [
+        { model: User, as: 'assignee', attributes: ['id', 'name', 'role'] },
+        { model: User, as: 'uploader', attributes: ['id', 'name', 'role'] },
+      ],
       order: [['order_index', 'ASC']],
     });
     res.json(items);
@@ -227,6 +248,128 @@ router.patch('/:id/checklist/confirm', requireRole('FL', 'INFO', 'ADMIN'), async
     if (count === 0) return res.status(400).json({ error: 'Cannot confirm an empty checklist' });
     await tender.update({ checklist_confirmed: true });
     res.json({ message: 'Checklist confirmed', checklist_confirmed: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Upload/replace checklist item document ────────────────────────────────────
+router.post('/:id/checklist/:itemId/upload', (req, res) => {
+  uploadChecklistDoc(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No document uploaded' });
+    try {
+      const tender = await Tender.findByPk(req.params.id);
+      if (!tender) return res.status(404).json({ error: 'Tender not found' });
+      const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
+      if (!item) return res.status(404).json({ error: 'Checklist item not found' });
+      if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id) {
+        return res.status(403).json({ error: 'This item is not assigned to you' });
+      }
+      await item.update({
+        uploaded_document_path: req.file.path,
+        uploaded_document_name: req.file.originalname,
+        uploaded_by: req.user.id,
+        uploaded_at: new Date(),
+        status: 'UPLOADED',
+      });
+      const updated = await ChecklistItem.findByPk(item.id, {
+        include: [
+          { model: User, as: 'assignee', attributes: ['id', 'name', 'role'] },
+          { model: User, as: 'uploader', attributes: ['id', 'name', 'role'] },
+        ],
+      });
+      res.json(updated);
+    } catch (dbErr) {
+      res.status(500).json({ error: dbErr.message });
+    }
+  });
+});
+
+// ── Start working on item ─────────────────────────────────────────────────────
+router.patch('/:id/checklist/:itemId/start', async (req, res) => {
+  try {
+    const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
+    if (!item) return res.status(404).json({ error: 'Checklist item not found' });
+    if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id) {
+      return res.status(403).json({ error: 'This item is not assigned to you' });
+    }
+    if (!['PENDING', 'REJECTED'].includes(item.status)) {
+      return res.status(400).json({ error: `Cannot start an item that is ${item.status}` });
+    }
+    await item.update({ status: 'IN_PROGRESS' });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Mark item as uploaded (no file) ───────────────────────────────────────────
+router.patch('/:id/checklist/:itemId/submit', async (req, res) => {
+  try {
+    const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
+    if (!item) return res.status(404).json({ error: 'Checklist item not found' });
+    if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id) {
+      return res.status(403).json({ error: 'This item is not assigned to you' });
+    }
+    await item.update({ status: 'UPLOADED' });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Approve item (FL / INFO / ADMIN) ───────────────────────────────────────────
+router.patch('/:id/checklist/:itemId/approve', requireRole(...CAN_REVIEW), async (req, res) => {
+  try {
+    const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id } });
+    if (!item) return res.status(404).json({ error: 'Checklist item not found' });
+    if (item.status !== 'UPLOADED') return res.status(400).json({ error: 'Only uploaded items can be approved' });
+    await item.update({ status: 'APPROVED', reviewer_notes: req.body.reviewer_notes || null });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Reject item (FL / INFO / ADMIN) ────────────────────────────────────────────
+router.patch('/:id/checklist/:itemId/reject', requireRole(...CAN_REVIEW), async (req, res) => {
+  try {
+    const { reviewer_notes } = req.body;
+    if (!reviewer_notes?.trim()) return res.status(400).json({ error: 'Reviewer notes are required when rejecting' });
+    const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id } });
+    if (!item) return res.status(404).json({ error: 'Checklist item not found' });
+    if (!['UPLOADED', 'APPROVED'].includes(item.status)) return res.status(400).json({ error: 'Only uploaded or approved items can be rejected' });
+    await item.update({ status: 'REJECTED', reviewer_notes });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── My Tasks: assigned items across active tenders ────────────────────────────
+router.get('/my-tasks', async (req, res) => {
+  try {
+    const activeStatuses = ['PENDING_FEASIBILITY', 'DOCUMENT_GATHERING', 'ASSEMBLY', 'SUBMITTED'];
+    const where = {
+      status: { [Op.in]: activeStatuses },
+      is_archived: false,
+    };
+    const items = await ChecklistItem.findAll({
+      where: {
+        ...checklistWhere(req.user),
+      },
+      include: [
+        { model: Tender, where, attributes: ['id', 'name', 'reference_number', 'procuring_entity', 'deadline', 'status'] },
+        { model: User, as: 'assignee', attributes: ['id', 'name', 'role'] },
+        { model: User, as: 'uploader', attributes: ['id', 'name', 'role'] },
+      ],
+      order: [
+        [Tender, 'deadline', 'ASC'],
+        ['order_index', 'ASC'],
+      ],
+    });
+    res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

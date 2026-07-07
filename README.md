@@ -131,8 +131,8 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 | 2     | Core Layout & Navigation                              | ✅ Complete  |
 | 3     | Tender Intake & Feasibility                           | ✅ Complete  |
 | 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  |
-| 5     | Document Gathering & My Tasks                         | ⏳ Next      |
-| 6     | Company Documents & Company Profile                   | ⏳ Pending   |
+| 5     | Document Gathering & My Tasks                         | ✅ Complete  |
+| 6     | Company Documents & Company Profile                   | ⏳ Next      |
 | 7     | Form Filling Engine                                   | ⏳ Pending   |
 | 8     | Signatures & Stamps                                   | ⏳ Pending   |
 | 9     | Document Assembly & Ordering                          | ⏳ Pending   |

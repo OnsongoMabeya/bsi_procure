@@ -43,6 +43,9 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [uploadingId, setUploadingId] = useState(null);
+  const [rejectingId, setRejectingId] = useState(null);
+  const [reviewerNotes, setReviewerNotes] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', category: 'other', is_form: false, form_reference: '', notes: '', suggested_assignee_role: 'INFO', assigned_to: '' });
 
@@ -183,6 +186,74 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
     } catch (e) {
       setError(e.message);
     }
+  };
+
+  const startItem = async (itemId) => {
+    try {
+      const res = await fetch(`/api/tenders/${tender.id}/checklist/${itemId}/start`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      await fetchItems();
+    } catch (e) { setError(e.message); }
+  };
+
+  const uploadItem = async (itemId, file) => {
+    setUploadingId(itemId);
+    setError('');
+    const form = new FormData();
+    form.append('document', file);
+    try {
+      const res = await fetch(`/api/tenders/${tender.id}/checklist/${itemId}/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      await fetchItems();
+    } catch (e) { setError(e.message); }
+    finally { setUploadingId(null); }
+  };
+
+  const submitItem = async (itemId) => {
+    try {
+      const res = await fetch(`/api/tenders/${tender.id}/checklist/${itemId}/submit`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      await fetchItems();
+    } catch (e) { setError(e.message); }
+  };
+
+  const approveItem = async (itemId) => {
+    try {
+      const res = await fetch(`/api/tenders/${tender.id}/checklist/${itemId}/approve`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewer_notes: reviewerNotes }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setRejectingId(null);
+      setReviewerNotes('');
+      await fetchItems();
+    } catch (e) { setError(e.message); }
+  };
+
+  const rejectItem = async (itemId) => {
+    if (!reviewerNotes.trim()) return setError('Reviewer notes are required');
+    try {
+      const res = await fetch(`/api/tenders/${tender.id}/checklist/${itemId}/reject`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewer_notes: reviewerNotes }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setRejectingId(null);
+      setReviewerNotes('');
+      await fetchItems();
+    } catch (e) { setError(e.message); }
   };
 
   const grouped = CATEGORY_ORDER.reduce((acc, cat) => {
@@ -362,6 +433,15 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
                         {item.name}
                       </div>
                       {item.notes && <div style={s.itemNotes}>{item.notes}</div>}
+                      {item.uploaded_document_path && (
+                        <div style={s.fileLine}>
+                          <a href={`/${item.uploaded_document_path}`} target="_blank" rel="noreferrer" style={s.fileLink}>📎 {item.uploaded_document_name}</a>
+                          <span style={s.fileMeta}>by {item.uploader?.name} • {new Date(item.uploaded_at).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {item.reviewer_notes && item.status === 'REJECTED' && (
+                        <div style={s.rejection}>{item.reviewer_notes}</div>
+                      )}
                     </div>
                     <div style={s.itemMeta}>
                       <span style={s.assignee}>
@@ -376,13 +456,53 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
                       <span style={{ ...s.statusBadge, background: STATUS_COLORS[item.status]?.bg, color: STATUS_COLORS[item.status]?.color }}>
                         {item.status}
                       </span>
-                      {canEdit && !isConfirmed && (
-                        <div style={s.itemActions}>
-                          <button style={s.btnEdit} onClick={() => startEdit(item)}>Edit</button>
-                          <button style={s.btnDel} onClick={() => handleDelete(item.id)}>✕</button>
-                        </div>
-                      )}
+                      <div style={s.itemActions}>
+                        {(item.status === 'PENDING' || item.status === 'REJECTED') && (
+                          <button style={s.btnStart} onClick={() => startItem(item.id)}>Start</button>
+                        )}
+                        {item.status === 'IN_PROGRESS' && (
+                          <>
+                            <label style={s.btnUpload}>
+                              {uploadingId === item.id ? '…' : 'Upload'}
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
+                                style={{ display: 'none' }}
+                                onChange={(e) => { if (e.target.files[0]) uploadItem(item.id, e.target.files[0]); e.target.value = ''; }}
+                                disabled={uploadingId === item.id}
+                              />
+                            </label>
+                            <button style={s.btnSubmit} onClick={() => submitItem(item.id)}>Mark uploaded</button>
+                          </>
+                        )}
+                        {item.status === 'UPLOADED' && canEdit && (
+                          <>
+                            <button style={s.btnApprove} onClick={() => approveItem(item.id)}>Approve</button>
+                            <button style={s.btnReject} onClick={() => { setRejectingId(item.id); setReviewerNotes(''); }}>Reject</button>
+                          </>
+                        )}
+                        {canEdit && !isConfirmed && (
+                          <>
+                            <button style={s.btnEdit} onClick={() => startEdit(item)}>Edit</button>
+                            <button style={s.btnDel} onClick={() => handleDelete(item.id)}>✕</button>
+                          </>
+                        )}
+                      </div>
                     </div>
+                    {rejectingId === item.id && (
+                      <div style={s.rejectBox}>
+                        <textarea
+                          style={s.notesInput}
+                          placeholder="Reviewer notes / reason for rejection"
+                          value={reviewerNotes}
+                          onChange={(e) => setReviewerNotes(e.target.value)}
+                        />
+                        <div style={s.rejectActions}>
+                          <button style={s.btnReject} onClick={() => rejectItem(item.id)}>Confirm Reject</button>
+                          <button style={s.btnCancel} onClick={() => setRejectingId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -406,6 +526,19 @@ const s = {
   btnCancel:  { padding: '5px 14px', background: '#fff', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 5, fontSize: 12 },
   btnEdit:    { padding: '3px 10px', background: '#f3f4f6', border: '1px solid var(--border)', color: 'var(--text-main)', borderRadius: 4, fontSize: 11, fontWeight: 600 },
   btnDel:     { padding: '3px 8px', background: '#fee2e2', border: 'none', color: 'var(--red)', borderRadius: 4, fontSize: 11, fontWeight: 700 },
+  btnStart:   { padding: '3px 10px', background: '#f0f9ff', border: '1px solid var(--bsi-accent)', color: 'var(--bsi-accent)', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' },
+  btnUpload:  { padding: '3px 10px', background: '#f0f9ff', border: '1px solid var(--bsi-accent)', color: 'var(--bsi-accent)', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'inline-block' },
+  btnSubmit:  { padding: '3px 10px', background: '#fff', border: '1px solid var(--border)', color: 'var(--text-main)', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' },
+  btnApprove: { padding: '3px 10px', background: 'var(--green)', border: 'none', color: '#fff', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' },
+  btnReject:  { padding: '3px 10px', background: '#fee2e2', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' },
+  btnCancel:  { padding: '3px 10px', background: '#fff', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 4, fontSize: 11, cursor: 'pointer' },
+  fileLine:   { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11, marginTop: 5 },
+  fileLink:   { color: 'var(--bsi-accent)', textDecoration: 'none', fontWeight: 600 },
+  fileMeta:   { color: 'var(--text-muted)' },
+  rejection:  { fontSize: 11, color: 'var(--red)', background: '#fee2e2', padding: '4px 8px', borderRadius: 5, marginTop: 5 },
+  rejectBox:  { width: '100%', background: '#fff', border: '1px solid var(--border)', borderRadius: 7, padding: 10, marginTop: 8 },
+  notesInput: { width: '100%', minHeight: 50, padding: 6, border: '1px solid var(--border)', borderRadius: 5, fontSize: 12, resize: 'vertical', boxSizing: 'border-box' },
+  rejectActions: { display: 'flex', gap: 6, marginTop: 6 },
   confirmedBanner: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 7, padding: '10px 16px', fontSize: 13, fontWeight: 600, color: 'var(--green)', marginBottom: 16 },
   error: { color: 'var(--red)', fontSize: 13, marginBottom: 8 },
   muted: { color: 'var(--text-muted)', fontSize: 13 },
