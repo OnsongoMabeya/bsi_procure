@@ -174,7 +174,7 @@ export default function MyTasksPage() {
         <div style={s.empty}>
           <div style={s.emptyIcon}>📋</div>
           <h3 style={s.emptyTitle}>No tasks assigned</h3>
-          <p style={s.emptyNote}>Checklist items assigned to you across active tenders will appear here.</p>
+          <p style={s.emptyNote}>Checklist items appear here only after the tender's checklist has been confirmed and locked.</p>
         </div>
       ) : (
         grouped.map(({ tender, items: groupItems }) => (
