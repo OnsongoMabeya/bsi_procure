@@ -20,7 +20,7 @@
     "mammoth": "^1.12.0",
     "multer": "^2.2.0",
     "mysql2": "^3.10.1",
-    "pdf-parse": "^2.4.5",
+    "pdf-parse": "1.1.1",
     "sequelize": "^6.37.3",
     "word-extractor": "^1.0.4"
   },
