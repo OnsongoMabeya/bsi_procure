@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import { authMiddleware, requireRole } from '../middleware/auth.js';
 import { uploadTenderDoc, uploadChecklistDoc } from '../middleware/upload.js';
 import Tender from '../models/Tender.js';
@@ -33,9 +33,27 @@ function canSeeFullChecklist(user) {
   return CAN_SEE_FULL_CHECKLIST.includes(user?.role);
 }
 
+function parseRoleList(value) {
+  if (!value || typeof value !== 'string') return [];
+  return value.split(/[,;\s]+/).map(r => r.trim().toUpperCase()).filter(Boolean);
+}
+
+function isSuggestedForUser(item, user) {
+  return parseRoleList(item?.suggested_assignee_role).includes(user?.role);
+}
+
 function checklistWhere(user) {
   if (canSeeFullChecklist(user)) return {};
-  return { assigned_to: user.id };
+  const role = user.role.toLowerCase();
+  return {
+    [Op.or]: [
+      { assigned_to: user.id },
+      Sequelize.where(
+        Sequelize.fn('CONCAT', ',', Sequelize.fn('REPLACE', Sequelize.fn('LOWER', Sequelize.col('suggested_assignee_role')), ' ', ''), ','),
+        { [Op.like]: `%,${role},%` }
+      ),
+    ],
+  };
 }
 
 // ── List tenders ──────────────────────────────────────────────────────────────
@@ -289,8 +307,8 @@ router.post('/:id/checklist/:itemId/upload', (req, res) => {
       if (!tender) return res.status(404).json({ error: 'Tender not found' });
       const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
       if (!item) return res.status(404).json({ error: 'Checklist item not found' });
-      if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id) {
-        return res.status(403).json({ error: 'This item is not assigned to you' });
+      if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id && !isSuggestedForUser(item, req.user)) {
+        return res.status(403).json({ error: 'This item is not assigned or suggested for you' });
       }
       await item.update({
         uploaded_document_path: req.file.path,
@@ -317,8 +335,8 @@ router.patch('/:id/checklist/:itemId/start', async (req, res) => {
   try {
     const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
     if (!item) return res.status(404).json({ error: 'Checklist item not found' });
-    if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id) {
-      return res.status(403).json({ error: 'This item is not assigned to you' });
+    if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id && !isSuggestedForUser(item, req.user)) {
+      return res.status(403).json({ error: 'This item is not assigned or suggested for you' });
     }
     if (!['PENDING', 'REJECTED'].includes(item.status)) {
       return res.status(400).json({ error: `Cannot start an item that is ${item.status}` });
@@ -335,8 +353,8 @@ router.patch('/:id/checklist/:itemId/submit', async (req, res) => {
   try {
     const item = await ChecklistItem.findOne({ where: { id: req.params.itemId, tender_id: req.params.id, ...checklistWhere(req.user) } });
     if (!item) return res.status(404).json({ error: 'Checklist item not found' });
-    if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id) {
-      return res.status(403).json({ error: 'This item is not assigned to you' });
+    if (!canSeeFullChecklist(req.user) && item.assigned_to !== req.user.id && !isSuggestedForUser(item, req.user)) {
+      return res.status(403).json({ error: 'This item is not assigned or suggested for you' });
     }
     await item.update({ status: 'UPLOADED' });
     res.json(item);
