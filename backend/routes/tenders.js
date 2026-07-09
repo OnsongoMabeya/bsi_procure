@@ -38,6 +38,11 @@ function parseRoleList(value) {
   return value.split(/[,;\s]+/).map(r => r.trim().toUpperCase()).filter(Boolean);
 }
 
+function webPath(absPath) {
+  if (!absPath) return absPath;
+  return absPath.replace(/^(.*[\\/])?uploads[\\/]/, 'uploads/').replace(/\\/g, '/');
+}
+
 function isSuggestedForUser(item, user) {
   return parseRoleList(item?.suggested_assignee_role).includes(user?.role);
 }
@@ -137,7 +142,7 @@ router.post('/', requireRole(...CAN_CREATE), (req, res) => {
         procuring_entity,
         deadline: new Date(deadline),
         submission_type,
-        uploaded_document_path: req.file ? req.file.path : null,
+        uploaded_document_path: req.file ? webPath(req.file.path) : null,
         uploaded_document_name: req.file ? req.file.originalname : null,
         uploaded_by: req.user.id,
         status: 'PENDING_FEASIBILITY',
@@ -209,7 +214,7 @@ router.patch('/:id/document', requireRole('ADMIN', 'FL', 'INFO'), (req, res) => 
         return res.status(403).json({ error: 'Only the creator or ADMIN can replace the document' });
       }
       await tender.update({
-        uploaded_document_path: req.file.path,
+        uploaded_document_path: webPath(req.file.path),
         uploaded_document_name: req.file.originalname,
       });
       res.json({ message: 'Document replaced', uploaded_document_name: req.file.originalname });
@@ -320,7 +325,7 @@ router.post('/:id/checklist/:itemId/upload', (req, res) => {
         return res.status(403).json({ error: 'This item is not assigned or suggested for you' });
       }
       await item.update({
-        uploaded_document_path: req.file.path,
+        uploaded_document_path: webPath(req.file.path),
         uploaded_document_name: req.file.originalname,
         uploaded_by: req.user.id,
         uploaded_at: new Date(),
