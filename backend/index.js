@@ -14,6 +14,7 @@ import Tender from './models/Tender.js';
 import ChecklistItem from './models/ChecklistItem.js';
 import CompanyProfile from './models/CompanyProfile.js';
 import CompanyProfileVersion from './models/CompanyProfileVersion.js';
+import Director from './models/Director.js';
 
 User.hasMany(Tender, { foreignKey: 'uploaded_by', as: 'createdTenders' });
 Tender.belongsTo(User, { foreignKey: 'uploaded_by', as: 'creator' });
@@ -24,6 +25,8 @@ ChecklistItem.belongsTo(User, { foreignKey: 'assigned_to', as: 'assignee' });
 ChecklistItem.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 
 CompanyProfileVersion.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
+CompanyProfile.hasMany(Director, { foreignKey: 'company_profile_id', as: 'directors' });
+Director.belongsTo(CompanyProfile, { foreignKey: 'company_profile_id', as: 'companyProfile' });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });

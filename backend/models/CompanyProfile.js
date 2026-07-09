@@ -3,7 +3,7 @@ import sequelize from '../config/database.js';
 
 const CompanyProfile = sequelize.define('CompanyProfile', {
   id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.INTEGER.UNSIGNED,
     primaryKey: true,
     autoIncrement: true,
   },
@@ -34,10 +34,6 @@ const CompanyProfile = sequelize.define('CompanyProfile', {
   },
   website: {
     type: DataTypes.STRING(255),
-  },
-  directors: {
-    type: DataTypes.JSON,
-    defaultValue: [],
   },
   authorized_representative_name: {
     type: DataTypes.STRING(255),
@@ -79,7 +75,7 @@ const CompanyProfile = sequelize.define('CompanyProfile', {
     type: DataTypes.STRING(255),
   },
   source_document_version_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.INTEGER.UNSIGNED,
   },
 }, {
   tableName: 'company_profiles',

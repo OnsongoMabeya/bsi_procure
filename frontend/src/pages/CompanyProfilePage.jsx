@@ -40,6 +40,7 @@ export default function CompanyProfilePage() {
   const isAdmin = user?.role === 'ADMIN';
   const [profile, setProfile] = useState(null);
   const [versions, setVersions] = useState([]);
+  const [directors, setDirectors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -55,7 +56,8 @@ export default function CompanyProfilePage() {
       if (!res.ok) throw new Error(data.error);
       setProfile(data.profile);
       setVersions(data.versions || []);
-      setForm(data.profile);
+      setDirectors(data.directors || []);
+      setForm({ ...data.profile, directors: data.directors || [] });
     } catch (e) {
       setMessage(e.message);
     } finally {
@@ -74,14 +76,16 @@ export default function CompanyProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const payload = { ...form, directors: form.directors || [] };
       const res = await fetch('/api/company-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setProfile(data);
+      setDirectors(data.directors || []);
       setForm(data);
       setEditing(false);
       setMessage('Profile saved successfully.');
@@ -124,7 +128,7 @@ export default function CompanyProfilePage() {
         )}
         {isAdmin && editing && (
           <div style={s.actions}>
-            <button style={s.btnSecondary} onClick={() => { setForm(profile); setEditing(false); }}>Cancel</button>
+            <button style={s.btnSecondary} onClick={() => { setForm({ ...profile, directors }); setEditing(false); }}>Cancel</button>
             <button style={s.btnPrimary} onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
           </div>
         )}
@@ -165,16 +169,16 @@ export default function CompanyProfilePage() {
               {editing ? (
                 <DirectorEditor value={form.directors || []} onChange={(v) => handleChange('directors', v)} />
               ) : (
-                (profile.directors || []).length === 0 ? (
+                directors.length === 0 ? (
                   <p style={s.muted}>No directors added yet.</p>
                 ) : (
                   <ul style={s.list}>
-                    {(profile.directors || []).map((d, i) => (
-                      <li key={i} style={s.listItem}>
+                    {directors.map((d) => (
+                      <li key={d.id} style={s.listItem}>
                         <strong>{d.name}</strong>
                         {d.nationality && <span> · {d.nationality}</span>}
                         {d.citizenship && <span> · {d.citizenship}</span>}
-                        {d.sharePercentage && <span> · {d.sharePercentage}%</span>}
+                        {d.share_percentage && <span> · {d.share_percentage}%</span>}
                       </li>
                     ))}
                   </ul>
@@ -238,7 +242,7 @@ function DirectorEditor({ value, onChange }) {
     next[idx] = { ...next[idx], [key]: val };
     onChange(next);
   };
-  const add = () => onChange([...value, { name: '', nationality: '', citizenship: '', sharePercentage: '' }]);
+  const add = () => onChange([...value, { name: '', nationality: '', citizenship: '', share_percentage: '' }]);
   const remove = (idx) => {
     const next = [...value];
     next.splice(idx, 1);
@@ -252,7 +256,7 @@ function DirectorEditor({ value, onChange }) {
           <input style={s.input} placeholder="Name" value={d.name} onChange={(e) => update(i, 'name', e.target.value)} />
           <input style={s.input} placeholder="Nationality" value={d.nationality} onChange={(e) => update(i, 'nationality', e.target.value)} />
           <input style={s.input} placeholder="Citizenship" value={d.citizenship} onChange={(e) => update(i, 'citizenship', e.target.value)} />
-          <input style={s.input} placeholder="Share %" value={d.sharePercentage} onChange={(e) => update(i, 'sharePercentage', e.target.value)} />
+          <input style={s.input} placeholder="Share %" value={d.share_percentage} onChange={(e) => update(i, 'share_percentage', e.target.value)} />
           <button style={s.btnDanger} onClick={() => remove(i)}>Remove</button>
         </div>
       ))}

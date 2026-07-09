@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import CompanyProfile from '../models/CompanyProfile.js';
 import CompanyProfileVersion from '../models/CompanyProfileVersion.js';
+import Director from '../models/Director.js';
 import User from '../models/User.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { uploadCompanyProfileDoc } from '../middleware/upload.js';
@@ -22,7 +23,6 @@ const SEED_PROFILE = {
   phone: '+254 718 465622 / +254 20 2051624',
   email: 'info@bsint.net / sales@bsint.net',
   website: 'www.bsint.net',
-  directors: [],
   authorized_representative_name: '',
   authorized_representative_title: '',
   authorized_representative_email: '',
@@ -48,12 +48,18 @@ async function getOrCreateProfile() {
 router.get('/', async (req, res) => {
   try {
     const profile = await getOrCreateProfile();
-    const versions = await CompanyProfileVersion.findAll({
-      where: { company_profile_id: profile.id },
-      include: [{ model: User, as: 'uploader', attributes: ['id', 'name', 'role'] }],
-      order: [['created_at', 'DESC']],
-    });
-    res.json({ profile, versions });
+    const [versions, directors] = await Promise.all([
+      CompanyProfileVersion.findAll({
+        where: { company_profile_id: profile.id },
+        include: [{ model: User, as: 'uploader', attributes: ['id', 'name', 'role'] }],
+        order: [['created_at', 'DESC']],
+      }),
+      Director.findAll({
+        where: { company_profile_id: profile.id, is_active: true },
+        order: [['created_at', 'ASC']],
+      }),
+    ]);
+    res.json({ profile, versions, directors });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -69,7 +75,7 @@ router.put('/', async (req, res) => {
     const profile = await getOrCreateProfile();
     const allowedFields = [
       'company_name', 'trading_name', 'registration_number', 'year_of_incorporation',
-      'legal_address', 'postal_address', 'phone', 'email', 'website', 'directors',
+      'legal_address', 'postal_address', 'phone', 'email', 'website',
       'authorized_representative_name', 'authorized_representative_title',
       'authorized_representative_email', 'authorized_representative_phone',
       'nature_of_business', 'max_contract_value', 'trade_license_number',
@@ -81,7 +87,32 @@ router.put('/', async (req, res) => {
     }
 
     await profile.update(updates);
-    res.json(profile);
+
+    // Sync directors: soft-delete existing active directors and recreate from payload
+    if (Array.isArray(req.body.directors)) {
+      await Director.update(
+        { is_active: false },
+        { where: { company_profile_id: profile.id, is_active: true } }
+      );
+      for (const d of req.body.directors) {
+        if (!d.name?.trim()) continue;
+        await Director.create({
+          company_profile_id: profile.id,
+          name: d.name.trim(),
+          nationality: d.nationality?.trim() || null,
+          citizenship: d.citizenship?.trim() || null,
+          share_percentage: d.share_percentage || d.sharePercentage || null,
+          is_active: true,
+        });
+      }
+    }
+
+    const updatedDirectors = await Director.findAll({
+      where: { company_profile_id: profile.id, is_active: true },
+      order: [['created_at', 'ASC']],
+    });
+
+    res.json({ ...profile.toJSON(), directors: updatedDirectors });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
