@@ -435,7 +435,7 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
                       {item.notes && <div style={s.itemNotes}>{item.notes}</div>}
                       {item.uploaded_document_path && (
                         <div style={s.fileLine}>
-                          <a href={`/${item.uploaded_document_path}`} target="_blank" rel="noreferrer" style={s.fileLink}>📎 {item.uploaded_document_name}</a>
+                          <a href={`${window.location.origin}/${item.uploaded_document_path}`} target="_blank" rel="noreferrer" style={s.fileLink}>📎 {item.uploaded_document_name}</a>
                           <span style={s.fileMeta}>by {item.uploader?.name} • {new Date(item.uploaded_at).toLocaleString()}</span>
                         </div>
                       )}

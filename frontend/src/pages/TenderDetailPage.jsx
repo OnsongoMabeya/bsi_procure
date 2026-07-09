@@ -188,7 +188,7 @@ export default function TenderDetailPage() {
               <span style={s.metaLabel}>Uploaded Document</span>
               <a
                 style={{ ...s.metaValue, color: 'var(--bsi-accent)', fontWeight: 600, wordBreak: 'break-all' }}
-                href={`/uploads/tenders/${tender.uploaded_document_path.split(/[\\/]/).pop()}`}
+                href={`${window.location.origin}/uploads/tenders/${tender.uploaded_document_path.split(/[\\/]/).pop()}`}
                 target="_blank"
                 rel="noreferrer"
                 download={tender.uploaded_document_name}
