@@ -7,6 +7,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { uploadCompanyProfileDoc } from '../middleware/upload.js';
 
 const router = Router();
+router.use(authMiddleware);
 
 function webPath(absPath) {
   if (!absPath) return absPath;
