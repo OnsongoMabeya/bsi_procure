@@ -108,6 +108,73 @@ router.get('/my-tasks', async (req, res) => {
   }
 });
 
+// ── Document library: all uploaded docs across active tenders ───────────────
+router.get('/documents', async (req, res) => {
+  try {
+    const activeStatuses = ['PENDING_FEASIBILITY', 'DOCUMENT_GATHERING', 'ASSEMBLY', 'SUBMITTED'];
+    const where = { status: { [Op.in]: activeStatuses }, is_archived: false };
+
+    const tenders = await Tender.findAll({
+      where,
+      attributes: ['id', 'name', 'reference_number', 'procuring_entity', 'deadline', 'status'],
+      include: [
+        { model: User, as: 'creator', attributes: ['id', 'name', 'role'] },
+      ],
+      order: [['deadline', 'ASC']],
+    });
+
+    const checklistItems = await ChecklistItem.findAll({
+      where: { uploaded_document_path: { [Op.ne]: null } },
+      include: [
+        { model: Tender, as: 'tender', where, attributes: ['id', 'name', 'reference_number', 'procuring_entity', 'deadline', 'status'] },
+        { model: User, as: 'uploader', attributes: ['id', 'name', 'role'] },
+        { model: User, as: 'assignee', attributes: ['id', 'name', 'role'] },
+      ],
+      order: [['uploaded_at', 'DESC']],
+    });
+
+    const docs = [];
+
+    for (const tender of tenders) {
+      if (tender.uploaded_document_path) {
+        docs.push({
+          id: `tender-${tender.id}`,
+          type: 'tender',
+          tender: { id: tender.id, name: tender.name, reference_number: tender.reference_number, procuring_entity: tender.procuring_entity, deadline: tender.deadline, status: tender.status },
+          name: tender.uploaded_document_name,
+          path: tender.uploaded_document_path,
+          status: 'UPLOADED',
+          category: 'Tender Document',
+          itemName: 'Original Tender Document',
+          uploadedAt: tender.created_at,
+          uploader: tender.creator,
+        });
+      }
+    }
+
+    for (const item of checklistItems) {
+      docs.push({
+        id: `item-${item.id}`,
+        type: 'checklist_item',
+        tender: item.tender,
+        name: item.uploaded_document_name,
+        path: item.uploaded_document_path,
+        status: item.status,
+        category: item.category,
+        itemName: item.name,
+        uploadedAt: item.uploaded_at,
+        uploader: item.uploader,
+        assignee: item.assignee,
+      });
+    }
+
+    docs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+    res.json(docs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Get single tender ─────────────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
