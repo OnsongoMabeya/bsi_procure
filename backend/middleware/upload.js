@@ -8,8 +8,10 @@ const __dirname = path.dirname(__filename);
 
 const tendersDir = path.join(__dirname, '..', 'uploads', 'tenders');
 const checklistDir = path.join(__dirname, '..', 'uploads', 'checklist_items');
+const companyProfileDir = path.join(__dirname, '..', 'uploads', 'company_profile');
 if (!fs.existsSync(tendersDir)) fs.mkdirSync(tendersDir, { recursive: true });
 if (!fs.existsSync(checklistDir)) fs.mkdirSync(checklistDir, { recursive: true });
+if (!fs.existsSync(companyProfileDir)) fs.mkdirSync(companyProfileDir, { recursive: true });
 
 function makeStorage(destDir) {
   return multer.diskStorage({
@@ -45,5 +47,11 @@ export const uploadTenderDoc = multer({
 export const uploadChecklistDoc = multer({
   storage: makeStorage(checklistDir),
   fileFilter: checklistFileFilter,
+  limits: { fileSize: 50 * 1024 * 1024 },
+}).single('document');
+
+export const uploadCompanyProfileDoc = multer({
+  storage: makeStorage(companyProfileDir),
+  fileFilter: tenderFileFilter,
   limits: { fileSize: 50 * 1024 * 1024 },
 }).single('document');
