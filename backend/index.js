@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import tenderRoutes from './routes/tenders.js';
 import companyProfileRoutes from './routes/companyProfile.js';
+import companyDocumentsRoutes from './routes/companyDocuments.js';
 import aiRoutes from './routes/ai.js';
 import User from './models/User.js';
 import Tender from './models/Tender.js';
@@ -15,6 +16,8 @@ import ChecklistItem from './models/ChecklistItem.js';
 import CompanyProfile from './models/CompanyProfile.js';
 import CompanyProfileVersion from './models/CompanyProfileVersion.js';
 import Director from './models/Director.js';
+import CompanyDocument from './models/CompanyDocument.js';
+import CompanyDocumentVersion from './models/CompanyDocumentVersion.js';
 
 User.hasMany(Tender, { foreignKey: 'uploaded_by', as: 'createdTenders' });
 Tender.belongsTo(User, { foreignKey: 'uploaded_by', as: 'creator' });
@@ -27,6 +30,11 @@ ChecklistItem.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 CompanyProfileVersion.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 CompanyProfile.hasMany(Director, { foreignKey: 'company_profile_id', as: 'directors' });
 Director.belongsTo(CompanyProfile, { foreignKey: 'company_profile_id', as: 'companyProfile' });
+
+CompanyDocument.hasMany(CompanyDocumentVersion, { foreignKey: 'company_document_id', as: 'versions' });
+CompanyDocumentVersion.belongsTo(CompanyDocument, { foreignKey: 'company_document_id', as: 'document' });
+CompanyDocument.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
+CompanyDocumentVersion.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -51,6 +59,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tenders', tenderRoutes);
 app.use('/api/company-profile', companyProfileRoutes);
+app.use('/api/company-documents', companyDocumentsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
