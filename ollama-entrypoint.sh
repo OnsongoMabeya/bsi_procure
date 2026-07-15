@@ -9,7 +9,7 @@ SERVE_PID=$!
 
 # Wait for server to be ready
 for i in 1 2 3 4 5 6 7 8 9 10; do
-  if curl -fsS "http://localhost:11434/api/tags" >/dev/null 2>&1; then
+  if ollama list >/dev/null 2>&1; then
     echo "[ollama] Server ready."
     break
   fi
