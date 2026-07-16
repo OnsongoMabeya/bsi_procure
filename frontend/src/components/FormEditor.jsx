@@ -206,14 +206,14 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
 }
 
 const styles = {
-  modal: { background: '#fff', border: '1px solid #dbe3f0', borderRadius: 10, marginTop: 16, overflow: 'hidden' },
+  modal: { position: 'fixed', inset: 20, zIndex: 1000, display: 'flex', flexDirection: 'column', background: '#fff', border: '1px solid #dbe3f0', borderRadius: 10, boxShadow: '0 18px 48px rgba(15, 23, 42, .28)', overflow: 'hidden' },
   header: { padding: '16px 20px', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', borderBottom: '1px solid #e5e7eb' },
   title: { margin: 0, color: '#153E90', fontSize: 18 }, subtitle: { color: '#6b7280', margin: '5px 0 0', fontSize: 13 },
   close: { border: '1px solid #cbd5e1', background: '#fff', borderRadius: 6, padding: '7px 12px', cursor: 'pointer' },
   error: { margin: 12, padding: 10, background: '#fee2e2', color: '#991b1b', borderRadius: 6, fontSize: 13 },
   message: { margin: 12, padding: 10, background: '#dcfce7', color: '#166534', borderRadius: 6, fontSize: 13 },
   state: { padding: 24, color: '#6b7280' }, templateState: { padding: 28, textAlign: 'center' },
-  workspace: { display: 'flex', minHeight: 620 }, panel: { width: 275, flexShrink: 0, borderRight: '1px solid #e5e7eb', padding: 16, background: '#f8fafc', overflowY: 'auto' },
+  workspace: { display: 'flex', flex: 1, minHeight: 0 }, panel: { width: 275, flexShrink: 0, borderRight: '1px solid #e5e7eb', padding: 16, background: '#f8fafc', overflowY: 'auto' },
   label: { display: 'block', fontWeight: 700, color: '#334155', fontSize: 12, marginBottom: 6 }, textarea: { width: '100%', minHeight: 74, boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: 6, padding: 8, resize: 'vertical' },
   input: { width: '100%', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: 6, padding: 7, marginBottom: 14 },
   autofillHeader: { fontWeight: 700, color: '#153E90', fontSize: 13, margin: '8px 0' }, autofillList: { maxHeight: 210, overflowY: 'auto', display: 'grid', gap: 6 },
