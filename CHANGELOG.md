@@ -431,7 +431,7 @@ docker compose exec backend npm run setup
 | 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  | Gemini + Ollama providers, multi-role assignment, checklist review/edit |
 | 5     | Document Gathering & My Tasks                         | ✅ Complete  | Checklist item statuses, per-item upload, My Tasks view                 |
 | 6     | Company Documents, Profile & My Documents             | ✅ Complete  | Company profile, reusable company docs, personal uploads, task inbox    |
-| 7     | Form Filling Engine                                   | ⏳ Pending   | Overlay editor, auto-fill from profile, flattened PDF output            |
+| 7     | Form Filling Engine                                   | ⏳ Next      | Overlay editor, auto-fill from profile, flattened PDF output            |
 | 8     | Signatures & Stamps                                   | ⏳ Pending   | Drag-and-place assets, flatten + immutable audit log                    |
 | 9     | Document Assembly & Ordering                          | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                           |
 | 10    | Page Serialization                                    | ⏳ Pending   | 6-digit page stamp, physical-submission toggle                          |
