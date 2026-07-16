@@ -21,9 +21,9 @@ const NAV = [
     roles: ['CEO', 'GM', 'FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN'],
   },
   {
-    label: 'Document Library',
+    label: 'My Documents',
     path: '/documents',
-    icon: '🗂',
+    icon: '🗂️',
     roles: ['GM', 'FL', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN'],
   },
   {

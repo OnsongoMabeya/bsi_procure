@@ -9,9 +9,11 @@ const __dirname = path.dirname(__filename);
 const tendersDir = path.join(__dirname, '..', 'uploads', 'tenders');
 const checklistDir = path.join(__dirname, '..', 'uploads', 'checklist_items');
 const companyProfileDir = path.join(__dirname, '..', 'uploads', 'company_profile');
+const userDocumentsDir = path.join(__dirname, '..', 'uploads', 'user_documents');
 if (!fs.existsSync(tendersDir)) fs.mkdirSync(tendersDir, { recursive: true });
 if (!fs.existsSync(checklistDir)) fs.mkdirSync(checklistDir, { recursive: true });
 if (!fs.existsSync(companyProfileDir)) fs.mkdirSync(companyProfileDir, { recursive: true });
+if (!fs.existsSync(userDocumentsDir)) fs.mkdirSync(userDocumentsDir, { recursive: true });
 
 function makeStorage(destDir) {
   return multer.diskStorage({
@@ -53,5 +55,18 @@ export const uploadChecklistDoc = multer({
 export const uploadCompanyProfileDoc = multer({
   storage: makeStorage(companyProfileDir),
   fileFilter: tenderFileFilter,
+  limits: { fileSize: 50 * 1024 * 1024 },
+}).single('document');
+
+const userDocumentFileFilter = (_req, file, cb) => {
+  const allowed = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xlsx'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowed.includes(ext)) return cb(null, true);
+  cb(new Error('Only PDF, JPG, PNG, DOC, DOCX, or XLSX files are allowed'));
+};
+
+export const uploadUserDoc = multer({
+  storage: makeStorage(userDocumentsDir),
+  fileFilter: userDocumentFileFilter,
   limits: { fileSize: 50 * 1024 * 1024 },
 }).single('document');
