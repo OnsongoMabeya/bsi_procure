@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
+import FormEditor from '../components/FormEditor';
 
 const STATUS_COLORS = {
   PENDING:     { bg: '#f3f4f6', color: '#374151' },
@@ -48,6 +49,7 @@ export default function DocumentLibraryPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [uploadingItemId, setUploadingItemId] = useState(null);
+  const [editorItem, setEditorItem] = useState(null);
   const itemFileRefs = useRef({});
 
   const [showForm, setShowForm] = useState(false);
@@ -325,6 +327,9 @@ export default function DocumentLibraryPage() {
                         )}
                       </div>
                       <div style={s.actions}>
+                        {item.is_form && item.status !== 'APPROVED' && (
+                          <button style={s.btnSubmit} onClick={() => setEditorItem(item)}>Fill Form</button>
+                        )}
                         {(item.status === 'PENDING' || item.status === 'REJECTED') && (
                           <button style={s.btnStart} onClick={() => startTask(item)}>Start</button>
                         )}
@@ -356,6 +361,14 @@ export default function DocumentLibraryPage() {
             ))
           )}
         </>
+      )}
+      {editorItem && (
+        <FormEditor
+          tenderId={editorItem.tender_id}
+          itemId={editorItem.id}
+          onClose={() => setEditorItem(null)}
+          onSaved={() => { setEditorItem(null); setMessage('Filled form saved for review.'); fetchAll(); }}
+        />
       )}
     </Layout>
   );

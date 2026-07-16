@@ -68,6 +68,7 @@ async function syncModels() {
   await import('../models/User.js');
   await import('../models/Tender.js');
   await import('../models/ChecklistItem.js');
+  await import('../models/FormTemplate.js');
 
   await sequelize.sync({ alter: true });
 

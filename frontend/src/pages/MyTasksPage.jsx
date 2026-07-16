@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
+import FormEditor from '../components/FormEditor';
 
 const CATEGORY_LABELS = {
   company_standing: 'Company Standing',
@@ -31,6 +32,7 @@ export default function MyTasksPage() {
   const [rejectingId, setRejectingId] = useState(null);
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+  const [editorItem, setEditorItem] = useState(null);
 
   const canReview = CAN_REVIEW.includes(user?.role);
 
@@ -220,6 +222,9 @@ export default function MyTasksPage() {
                     )}
                   </div>
                   <div style={s.actions}>
+                    {item.is_form && item.status !== 'APPROVED' && (
+                      <button style={s.btnSubmit} onClick={() => setEditorItem(item)}>Fill Form</button>
+                    )}
                     {(item.status === 'PENDING' || item.status === 'REJECTED') && (
                       <button style={s.btnStart} onClick={() => startTask(item)}>Start</button>
                     )}
@@ -269,6 +274,14 @@ export default function MyTasksPage() {
             </div>
           </div>
         ))
+      )}
+      {editorItem && (
+        <FormEditor
+          tenderId={editorItem.tender_id}
+          itemId={editorItem.id}
+          onClose={() => setEditorItem(null)}
+          onSaved={() => { setEditorItem(null); setActionMsg('Filled form saved for review'); fetchTasks(); }}
+        />
       )}
     </Layout>
   );

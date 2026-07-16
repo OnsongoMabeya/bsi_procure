@@ -10,10 +10,12 @@ const tendersDir = path.join(__dirname, '..', 'uploads', 'tenders');
 const checklistDir = path.join(__dirname, '..', 'uploads', 'checklist_items');
 const companyProfileDir = path.join(__dirname, '..', 'uploads', 'company_profile');
 const userDocumentsDir = path.join(__dirname, '..', 'uploads', 'user_documents');
+const formTemplatesDir = path.join(__dirname, '..', 'uploads', 'form_templates');
 if (!fs.existsSync(tendersDir)) fs.mkdirSync(tendersDir, { recursive: true });
 if (!fs.existsSync(checklistDir)) fs.mkdirSync(checklistDir, { recursive: true });
 if (!fs.existsSync(companyProfileDir)) fs.mkdirSync(companyProfileDir, { recursive: true });
 if (!fs.existsSync(userDocumentsDir)) fs.mkdirSync(userDocumentsDir, { recursive: true });
+if (!fs.existsSync(formTemplatesDir)) fs.mkdirSync(formTemplatesDir, { recursive: true });
 
 function makeStorage(destDir) {
   return multer.diskStorage({
@@ -68,5 +70,16 @@ const userDocumentFileFilter = (_req, file, cb) => {
 export const uploadUserDoc = multer({
   storage: makeStorage(userDocumentsDir),
   fileFilter: userDocumentFileFilter,
+  limits: { fileSize: 50 * 1024 * 1024 },
+}).single('document');
+
+const formTemplateFileFilter = (_req, file, cb) => {
+  if (path.extname(file.originalname).toLowerCase() === '.pdf') return cb(null, true);
+  cb(new Error('Only PDF form templates are allowed'));
+};
+
+export const uploadFormTemplate = multer({
+  storage: makeStorage(formTemplatesDir),
+  fileFilter: formTemplateFileFilter,
   limits: { fileSize: 50 * 1024 * 1024 },
 }).single('document');

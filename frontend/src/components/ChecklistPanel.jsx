@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import FormEditor from './FormEditor';
 
 const CAN_EDIT = ['FL', 'INFO', 'ADMIN'];
 const CAN_SCAN = ['FL', 'INFO', 'ADMIN'];
@@ -48,6 +49,7 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', category: 'other', is_form: false, form_reference: '', notes: '', suggested_assignee_role: 'INFO', assigned_to: '' });
+  const [editorItem, setEditorItem] = useState(null);
 
   const canEdit = CAN_EDIT.includes(user?.role);
   const canScan = CAN_SCAN.includes(user?.role);
@@ -457,6 +459,9 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
                         {item.status}
                       </span>
                       <div style={s.itemActions}>
+                        {item.is_form && item.status !== 'APPROVED' && (
+                          <button style={s.btnSubmit} onClick={() => setEditorItem(item)}>Fill Form</button>
+                        )}
                         {(item.status === 'PENDING' || item.status === 'REJECTED') && (
                           <button style={s.btnStart} onClick={() => startItem(item.id)}>Start</button>
                         )}
@@ -499,7 +504,7 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
                         />
                         <div style={s.rejectActions}>
                           <button style={s.btnReject} onClick={() => rejectItem(item.id)}>Confirm Reject</button>
-                          <button style={s.btnCancel} onClick={() => setRejectingId(null)}>Cancel</button>
+                          <button style={s.btnCancelSmall} onClick={() => setRejectingId(null)}>Cancel</button>
                         </div>
                       </div>
                     )}
@@ -509,6 +514,14 @@ export default function ChecklistPanel({ tender, onTenderUpdate }) {
             ))}
           </div>
         ))
+      )}
+      {editorItem && (
+        <FormEditor
+          tenderId={tender.id}
+          itemId={editorItem.id}
+          onClose={() => setEditorItem(null)}
+          onSaved={() => { setEditorItem(null); fetchItems(); }}
+        />
       )}
     </div>
   );
@@ -531,7 +544,7 @@ const s = {
   btnSubmit:  { padding: '3px 10px', background: '#fff', border: '1px solid var(--border)', color: 'var(--text-main)', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' },
   btnApprove: { padding: '3px 10px', background: 'var(--green)', border: 'none', color: '#fff', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' },
   btnReject:  { padding: '3px 10px', background: '#fee2e2', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' },
-  btnCancel:  { padding: '3px 10px', background: '#fff', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 4, fontSize: 11, cursor: 'pointer' },
+  btnCancelSmall: { padding: '3px 10px', background: '#fff', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: 4, fontSize: 11, cursor: 'pointer' },
   fileLine:   { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11, marginTop: 5 },
   fileLink:   { color: 'var(--bsi-accent)', textDecoration: 'none', fontWeight: 600 },
   fileMeta:   { color: 'var(--text-muted)' },
