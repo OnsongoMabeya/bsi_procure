@@ -352,6 +352,46 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 ---
 
+## Phase 6 — Company Documents, Profile & My Documents ✅
+**Date completed:** 2026-07-16
+
+### What was built
+
+#### Company Profile
+- **`backend/models/CompanyProfile.js`**, **`CompanyProfileVersion.js`**, and **`Director.js`** — structured company details, normalized directors, and source-document version history.
+- **`backend/routes/companyProfile.js`** — authenticated profile retrieval, ADMIN updates, and source-document uploads.
+- **`frontend/src/pages/CompanyProfilePage.jsx`** — editable grouped profile fields, director management, source upload, and version history.
+
+#### Company Documents
+- **`backend/models/CompanyDocument.js`** and **`CompanyDocumentVersion.js`** — reusable company-owned records with expiry dates and file-version history.
+- **`backend/routes/companyDocuments.js`** — authenticated CRUD, uploads, and version retrieval.
+- **`frontend/src/pages/CompanyDocumentsPage.jsx`** — document library with expiry alerts, upload, and version management.
+
+#### My Documents
+- **`backend/models/UserDocument.js`** — personal user-owned documents with label, category, description, file path, and ownership.
+- **`backend/middleware/upload.js`** — `uploadUserDoc` accepts PDF, JPG, PNG, DOC, DOCX, and XLSX uploads up to 50 MB, stored in `uploads/user_documents/`.
+- **`backend/routes/myDocuments.js`**:
+  - `GET /api/my-documents` returns the current user's personal files and non-approved assigned checklist items across active tenders.
+  - `POST /api/my-documents` uploads a personal document.
+  - `DELETE /api/my-documents/:id` removes a document owned by the current user; ADMIN may also delete.
+- **`frontend/src/pages/DocumentLibraryPage.jsx`** — replaced with the **My Documents** experience at `/documents`:
+  - **My Uploads** tab for CVs, certificates, signature files, professional files, and other personal records.
+  - **Task Inbox** tab grouped by tender, with status, deadline countdown, Start, Upload, and Mark uploaded actions.
+- **`frontend/src/components/Sidebar.jsx`** and **`frontend/src/App.jsx`** — My Documents is visible and routable for FL, FIN, TECH, INFO, IT, and HOT.
+- **`nginx.frontend.conf`** — SPA route responses explicitly disable cache to prevent older frontend bundles from hiding recent navigation updates.
+
+### Decisions made
+- **Personal documents remain separate from company documents**: ownership is enforced through `owner_id`; tender-task files remain on checklist items.
+- **The task inbox includes only active tender work** and excludes approved checklist items.
+- **My Documents access is role-scoped** to operational document contributors: FL, FIN, TECH, INFO, IT, and HOT.
+- **Company profile editing remains ADMIN-only** while authorized roles can view company reference information.
+
+### Intentionally stubbed / deferred
+- Form field overlay, automated data population, and flattened form output → Phase 7.
+- Signature/stamp placement and immutable signature audit log → Phase 8.
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts
@@ -390,7 +430,7 @@ docker compose exec backend npm run setup
 | 3     | Tender Intake & Feasibility                           | ✅ Complete  | `tenders` table, file upload, GM/HOT feasibility approval flow          |
 | 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  | Gemini + Ollama providers, multi-role assignment, checklist review/edit |
 | 5     | Document Gathering & My Tasks                         | ✅ Complete  | Checklist item statuses, per-item upload, My Tasks view                 |
-| 6     | Company Documents & Profile                           | ⏳ Next      | Stamp/signature/cert library, BSI profile seed data                     |
+| 6     | Company Documents, Profile & My Documents             | ✅ Complete  | Company profile, reusable company docs, personal uploads, task inbox    |
 | 7     | Form Filling Engine                                   | ⏳ Pending   | Overlay editor, auto-fill from profile, flattened PDF output            |
 | 8     | Signatures & Stamps                                   | ⏳ Pending   | Drag-and-place assets, flatten + immutable audit log                    |
 | 9     | Document Assembly & Ordering                          | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                           |
