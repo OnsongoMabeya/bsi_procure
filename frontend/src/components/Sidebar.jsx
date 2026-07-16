@@ -24,7 +24,7 @@ const NAV = [
     label: 'My Documents',
     path: '/documents',
     icon: '🗂️',
-    roles: ['GM', 'FL', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN'],
+    roles: ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT'],
   },
   {
     label: 'Company Profile',

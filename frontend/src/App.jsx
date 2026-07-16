@@ -35,7 +35,7 @@ export default function App() {
             <ProtectedRoute roles={ALL_ROLES}><TenderDetailPage /></ProtectedRoute>
           } />
           <Route path="/documents" element={
-            <ProtectedRoute roles={['GM','FL','TECH','INFO','IT','HOT','ADMIN']}><DocumentLibraryPage /></ProtectedRoute>
+            <ProtectedRoute roles={['FL','FIN','TECH','INFO','IT','HOT']}><DocumentLibraryPage /></ProtectedRoute>
           } />
           <Route path="/company-profile" element={
             <ProtectedRoute roles={['ADMIN','FL','INFO']}><CompanyProfilePage /></ProtectedRoute>
