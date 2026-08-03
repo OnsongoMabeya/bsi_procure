@@ -174,7 +174,7 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
     const renderPreview = async () => {
       try {
         const page = await tenderPdf.getPage(extractStart);
-        const viewport = page.getViewport({ scale: 2.5 });
+        const viewport = page.getViewport({ scale: 2 });
         const canvas = previewCanvasRef.current;
         if (!canvas || cancelled) return;
         canvas.width = viewport.width;
@@ -368,7 +368,7 @@ const styles = {
   previewBox: { flex: '2 1 600px', minWidth: 380, textAlign: 'center' },
   previewLabel: { fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 8 },
   previewFrame: { display: 'inline-block', background: '#fff', padding: 14, borderRadius: 8, boxShadow: '0 4px 18px rgba(15, 23, 42, .18)', maxWidth: '100%', maxHeight: '78vh', overflow: 'auto' },
-  previewCanvas: { display: 'block' },
+  previewCanvas: { display: 'block', width: '100%', height: 'auto' },
   extractRight: { flex: '1 1 360px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 12 },
   extractControls: { display: 'flex', gap: 16 },
   extractLabel: { display: 'flex', flexDirection: 'column', gap: 4, fontWeight: 600, fontSize: 12, color: '#334155' },
