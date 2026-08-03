@@ -174,7 +174,7 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
     const renderPreview = async () => {
       try {
         const page = await tenderPdf.getPage(extractStart);
-        const viewport = page.getViewport({ scale: 1.35 });
+        const viewport = page.getViewport({ scale: 2.5 });
         const canvas = previewCanvasRef.current;
         if (!canvas || cancelled) return;
         canvas.width = viewport.width;
@@ -363,13 +363,13 @@ const styles = {
   viewerWrap: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }, toolbar: { padding: 12, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, borderBottom: '1px solid #e5e7eb' },
   primary: { background: '#153E90', color: '#fff', border: 0, borderRadius: 6, padding: '8px 12px', cursor: 'pointer', fontWeight: 700 }, secondary: { background: '#fff', color: '#153E90', border: '1px solid #93c5fd', borderRadius: 6, padding: '7px 10px', cursor: 'pointer' },
   templateActions: { display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 14 },
-  extractPanel: { textAlign: 'left', margin: '0 auto', padding: '0 12px', maxWidth: 1500 },
+  extractPanel: { textAlign: 'left', margin: '0 auto', padding: '0 12px', maxWidth: 1600 },
   extractLayout: { display: 'flex', gap: 20, alignItems: 'flex-start', justifyContent: 'center', flexWrap: 'wrap' },
-  previewBox: { flex: '1 1 520px', minWidth: 320, textAlign: 'center' },
+  previewBox: { flex: '2 1 600px', minWidth: 380, textAlign: 'center' },
   previewLabel: { fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 8 },
-  previewFrame: { display: 'inline-block', background: '#fff', padding: 14, borderRadius: 8, boxShadow: '0 4px 18px rgba(15, 23, 42, .18)' },
-  previewCanvas: { display: 'block', maxWidth: '100%', height: 'auto', maxHeight: '70vh' },
-  extractRight: { flex: '0 1 420px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 12 },
+  previewFrame: { display: 'inline-block', background: '#fff', padding: 14, borderRadius: 8, boxShadow: '0 4px 18px rgba(15, 23, 42, .18)', maxWidth: '100%', maxHeight: '78vh', overflow: 'auto' },
+  previewCanvas: { display: 'block' },
+  extractRight: { flex: '1 1 360px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 12 },
   extractControls: { display: 'flex', gap: 16 },
   extractLabel: { display: 'flex', flexDirection: 'column', gap: 4, fontWeight: 600, fontSize: 12, color: '#334155' },
   extractInput: { width: 90, padding: 6, border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 14 },
