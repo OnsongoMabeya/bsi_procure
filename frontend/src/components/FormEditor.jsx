@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { useAuth } from '../context/AuthContext';
 
-GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 const TEMPLATE_ROLES = ['FL', 'INFO', 'ADMIN'];
 
