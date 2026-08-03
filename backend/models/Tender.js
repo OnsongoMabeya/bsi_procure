@@ -40,6 +40,14 @@ const Tender = sequelize.define('Tender', {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
+  converted_document_path: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+  },
+  converted_document_name: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
   uploaded_by: {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: false,

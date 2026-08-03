@@ -5,6 +5,7 @@ import { uploadTenderDoc, uploadChecklistDoc } from '../middleware/upload.js';
 import Tender from '../models/Tender.js';
 import User from '../models/User.js';
 import ChecklistItem from '../models/ChecklistItem.js';
+import { convertDocxToPdf, isDocx } from '../utils/convertDocxToPdf.js';
 
 const VALID_ROLES = ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', 'GM', ''];
 
@@ -203,7 +204,7 @@ router.post('/', requireRole(...CAN_CREATE), (req, res) => {
     }
 
     try {
-      const tender = await Tender.create({
+      const tenderData = {
         name,
         reference_number,
         procuring_entity,
@@ -213,7 +214,19 @@ router.post('/', requireRole(...CAN_CREATE), (req, res) => {
         uploaded_document_name: req.file ? req.file.originalname : null,
         uploaded_by: req.user.id,
         status: 'PENDING_FEASIBILITY',
-      });
+      };
+
+      if (req.file && isDocx(req.file.path)) {
+        try {
+          const convertedPath = await convertDocxToPdf(req.file.path, path.join(path.dirname(req.file.path), 'converted'));
+          tenderData.converted_document_path = webPath(convertedPath);
+          tenderData.converted_document_name = path.basename(convertedPath);
+        } catch (convErr) {
+          console.error('DOCX to PDF conversion failed:', convErr.message);
+        }
+      }
+
+      const tender = await Tender.create(tenderData);
       res.status(201).json(tender);
     } catch (dbErr) {
       res.status(500).json({ error: dbErr.message });

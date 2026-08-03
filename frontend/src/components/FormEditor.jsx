@@ -136,7 +136,7 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
 
   const canUploadTemplate = TEMPLATE_ROLES.includes(user?.role);
 
-  const tenderDocumentPath = form?.item?.tender?.uploaded_document_path;
+  const tenderDocumentPath = form?.tender_pdf_path;
 
   const openExtraction = async () => {
     if (!tenderDocumentPath) {

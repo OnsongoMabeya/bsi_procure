@@ -6,6 +6,7 @@ import { Op, Sequelize } from 'sequelize';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { authMiddleware, requireRole } from '../middleware/auth.js';
 import { uploadFormTemplate } from '../middleware/upload.js';
+import { convertDocxToPdf, isDocx, isPdf } from '../utils/convertDocxToPdf.js';
 import ChecklistItem from '../models/ChecklistItem.js';
 import CompanyProfile from '../models/CompanyProfile.js';
 import FormTemplate from '../models/FormTemplate.js';
@@ -55,6 +56,22 @@ async function getFormItem(req) {
   return item;
 }
 
+async function resolveTenderPdfPath(tender) {
+  if (tender.converted_document_path) return tender.converted_document_path;
+  if (isPdf(tender.uploaded_document_path)) return tender.uploaded_document_path;
+  if (isDocx(tender.uploaded_document_path)) {
+    const inputPath = path.join(__dirname, '..', tender.uploaded_document_path);
+    const outputDir = path.join(path.dirname(inputPath), 'converted');
+    const convertedPath = await convertDocxToPdf(inputPath, outputDir);
+    await tender.update({
+      converted_document_path: webPath(convertedPath),
+      converted_document_name: path.basename(convertedPath),
+    });
+    return tender.converted_document_path;
+  }
+  return null;
+}
+
 function createAutofill(profile, tender) {
   return {
     company_name: profile?.company_name || '',
@@ -87,7 +104,8 @@ router.get('/tenders/:tenderId/checklist/:itemId', async (req, res) => {
       FormTemplate.findOne({ where: { checklist_item_id: item.id } }),
       CompanyProfile.findOne({ order: [['id', 'ASC']] }),
     ]);
-    res.json({ item, template, autofill: createAutofill(profile, item.tender) });
+    const tenderPdfPath = await resolveTenderPdfPath(item.tender);
+    res.json({ item, template, autofill: createAutofill(profile, item.tender), tender_pdf_path: tenderPdfPath });
   } catch (err) {
     res.status(err.message.includes('not found') || err.message.includes('confirmed') ? 404 : 500).json({ error: err.message });
   }
@@ -120,7 +138,7 @@ router.post('/tenders/:tenderId/checklist/:itemId/extract-template', requireRole
     const existing = await FormTemplate.findOne({ where: { checklist_item_id: item.id } });
     if (existing) return res.status(409).json({ error: 'A template already exists for this form. Create a new checklist item to use another template.' });
 
-    const tenderPath = item.tender?.uploaded_document_path;
+    const tenderPath = await resolveTenderPdfPath(item.tender);
     if (!tenderPath) return res.status(400).json({ error: 'Tender has no uploaded source document to extract from' });
 
     const startPage = Math.max(1, Number(req.body.start_page) || 1);
