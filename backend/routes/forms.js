@@ -13,6 +13,7 @@ import Tender from '../models/Tender.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outputDir = path.join(__dirname, '..', 'uploads', 'form_outputs');
+const formTemplatesDir = path.join(__dirname, '..', 'uploads', 'form_templates');
 const router = Router();
 
 router.use(authMiddleware);
@@ -111,6 +112,50 @@ router.post('/tenders/:tenderId/checklist/:itemId/template', requireRole(...TEMP
       res.status(err.message.includes('not found') ? 404 : 500).json({ error: err.message });
     }
   });
+});
+
+router.post('/tenders/:tenderId/checklist/:itemId/extract-template', requireRole(...TEMPLATE_ROLES), async (req, res) => {
+  try {
+    const item = await getFormItem(req);
+    const existing = await FormTemplate.findOne({ where: { checklist_item_id: item.id } });
+    if (existing) return res.status(409).json({ error: 'A template already exists for this form. Create a new checklist item to use another template.' });
+
+    const tenderPath = item.tender?.uploaded_document_path;
+    if (!tenderPath) return res.status(400).json({ error: 'Tender has no uploaded source document to extract from' });
+
+    const startPage = Math.max(1, Number(req.body.start_page) || 1);
+    const endPage = Math.max(startPage, Number(req.body.end_page) || startPage);
+
+    const tenderBytes = await fs.readFile(path.join(__dirname, '..', tenderPath));
+    const tenderPdf = await PDFDocument.load(tenderBytes);
+    const totalPages = tenderPdf.getPageCount();
+
+    if (startPage > totalPages || endPage > totalPages) {
+      return res.status(400).json({ error: `Tender PDF only has ${totalPages} pages. Requested range ${startPage}-${endPage}.` });
+    }
+
+    const extracted = await PDFDocument.create();
+    const pageIndices = [];
+    for (let p = startPage - 1; p < endPage; p++) pageIndices.push(p);
+    const copied = await extracted.copyPages(tenderPdf, pageIndices);
+    copied.forEach((page) => extracted.addPage(page));
+
+    await fs.mkdir(formTemplatesDir, { recursive: true });
+    const outputName = `extracted_${Date.now()}_${safeFileName(item.form_reference || item.name)}_p${startPage}-${endPage}.pdf`;
+    const outputPath = path.join(formTemplatesDir, outputName);
+    await fs.writeFile(outputPath, await extracted.save());
+
+    const template = await FormTemplate.create({
+      checklist_item_id: item.id,
+      file_path: webPath(outputPath),
+      file_name: outputName,
+      uploaded_by: req.user.id,
+    });
+
+    res.status(201).json({ message: `Extracted pages ${startPage}-${endPage} into blank template`, template });
+  } catch (err) {
+    res.status(err.message.includes('not found') || err.message.includes('confirmed') ? 404 : 500).json({ error: err.message });
+  }
 });
 
 router.post('/tenders/:tenderId/checklist/:itemId/flatten', async (req, res) => {

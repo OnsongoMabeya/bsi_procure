@@ -392,6 +392,37 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 ---
 
+## Phase 7 — Form Filling Engine ✅
+**Date completed:** 2026-08-03
+
+### What was built
+
+#### Backend
+- **`backend/models/FormTemplate.js`** — immutable blank PDF template linked one-to-one with a fillable checklist item.
+- **`backend/routes/forms.js`**:
+  - `GET /api/forms/tenders/:id/checklist/:itemId` — returns the checklist item, existing template, and auto-fill values from Company Profile + tender data.
+  - `POST /api/forms/tenders/:id/checklist/:itemId/template` — upload a standalone blank PDF template.
+  - `POST /api/forms/tenders/:id/checklist/:itemId/extract-template` — **slice a page range from the original tender PDF** into the checklist item's template.
+  - `POST /api/forms/tenders/:id/checklist/:itemId/flatten` — permanently embeds placed text into the template and saves a submission-ready PDF, updating the checklist item to `UPLOADED`.
+
+#### Frontend
+- **`frontend/src/components/FormEditor.jsx`** — fixed-overlay PDF editor:
+  - Renders the blank template page-by-page via `pdfjs-dist`.
+  - Click-to-place text fields with adjustable font size.
+  - Auto-fill panel populated from Company Profile and tender fields.
+  - Editable per-page field list.
+  - **Page-range extraction UI** that loads the tender PDF, shows thumbnails, and lets FL/INFO select start/end pages to create the blank template automatically.
+
+### Decisions made
+- **Templates are immutable**: once created, a checklist item's blank template is preserved; flattening always produces a separate output file.
+- **Form extraction is manual page-range selection**: the system does not attempt AI-based form boundary detection; the user visually picks the pages for each form inside the tender PDF.
+- **Auto-fill uses exact Company Profile fields** plus tender metadata; remaining fields are filled manually in the overlay editor.
+
+### Intentionally stubbed / deferred
+- Signature and stamp placement → Phase 8.
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts
@@ -431,7 +462,7 @@ docker compose exec backend npm run setup
 | 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  | Gemini + Ollama providers, multi-role assignment, checklist review/edit |
 | 5     | Document Gathering & My Tasks                         | ✅ Complete  | Checklist item statuses, per-item upload, My Tasks view                 |
 | 6     | Company Documents, Profile & My Documents             | ✅ Complete  | Company profile, reusable company docs, personal uploads, task inbox    |
-| 7     | Form Filling Engine                                   | ⏳ Next      | Overlay editor, auto-fill from profile, flattened PDF output            |
+| 7     | Form Filling Engine                                   | ✅ Complete  | Overlay editor, auto-fill from profile, flattened PDF output, tender page extraction |
 | 8     | Signatures & Stamps                                   | ⏳ Pending   | Drag-and-place assets, flatten + immutable audit log                    |
 | 9     | Document Assembly & Ordering                          | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                           |
 | 10    | Page Serialization                                    | ⏳ Pending   | 6-digit page stamp, physical-submission toggle                          |
