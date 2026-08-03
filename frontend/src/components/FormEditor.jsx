@@ -28,6 +28,7 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
   const [extractStart, setExtractStart] = useState(1);
   const [extractEnd, setExtractEnd] = useState(1);
   const fileInputRef = useRef(null);
+  const previewCanvasRef = useRef(null);
 
   const request = async (path, options = {}) => {
     const res = await fetch(`/api/forms${path}`, {
@@ -167,6 +168,26 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
     }
   };
 
+  useEffect(() => {
+    if (!extractMode || !tenderPdf || !extractStart) return undefined;
+    let cancelled = false;
+    const renderPreview = async () => {
+      try {
+        const page = await tenderPdf.getPage(extractStart);
+        const viewport = page.getViewport({ scale: 1.35 });
+        const canvas = previewCanvasRef.current;
+        if (!canvas || cancelled) return;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      } catch (err) {
+        if (!cancelled) console.error('Preview render failed:', err);
+      }
+    };
+    renderPreview();
+    return () => { cancelled = true; };
+  }, [extractMode, tenderPdf, extractStart]);
+
   const selectPage = (page) => {
     if (page < extractStart) {
       setExtractStart(page);
@@ -230,6 +251,12 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
                   <label style={styles.extractLabel}>End page
                     <input type="number" min={extractStart} max={tenderPageCount || 1} value={extractEnd} onChange={(e) => setExtractEnd(Math.max(Math.min(Number(e.target.value) || 1, tenderPageCount || 1), extractStart))} style={styles.extractInput} />
                   </label>
+                </div>
+                <div style={styles.previewBox}>
+                  <div style={styles.previewLabel}>Preview of first selected page ({extractStart})</div>
+                  <div style={styles.previewFrame}>
+                    <canvas ref={previewCanvasRef} style={styles.previewCanvas} />
+                  </div>
                 </div>
                 <div style={styles.thumbnailGrid}>
                   {tenderThumbnails.map(({ page, dataUrl }) => (
@@ -337,6 +364,10 @@ const styles = {
   extractLabel: { display: 'flex', flexDirection: 'column', gap: 4, fontWeight: 600, fontSize: 12, color: '#334155' },
   extractInput: { width: 90, padding: 6, border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 14 },
   extractActions: { display: 'flex', gap: 10, marginTop: 14, justifyContent: 'center' },
+  previewBox: { margin: '12px 0', textAlign: 'center' },
+  previewLabel: { fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 8 },
+  previewFrame: { display: 'inline-block', background: '#fff', padding: 12, borderRadius: 8, boxShadow: '0 4px 18px rgba(15, 23, 42, .18)' },
+  previewCanvas: { display: 'block', maxWidth: '100%', height: 'auto', maxHeight: '52vh' },
   thumbnailGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8, maxHeight: 320, overflowY: 'auto', padding: 10, background: '#f1f5f9', borderRadius: 8, marginTop: 8 },
   thumbnail: { border: '2px solid #e2e8f0', borderRadius: 6, padding: 4, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
   thumbImg: { width: '100%', height: 'auto', display: 'block', borderRadius: 4 },
