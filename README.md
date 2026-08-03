@@ -143,7 +143,7 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 | 5     | Document Gathering & My Tasks                         | ✅ Complete  |
 | 6     | Company Documents, Profile & My Documents             | ✅ Complete  |
 | 7     | Form Filling Engine                                   | ✅ Complete  |
-| 8     | Signatures & Stamps                                   | ⏳ Pending   |
+| 8     | Signatures & Stamps                                   | ⏳ Next      |
 | 9     | Document Assembly & Ordering                          | ⏳ Pending   |
 | 10    | Page Serialization                                    | ⏳ Pending   |
 | 11    | Final Submission                                      | ⏳ Pending   |

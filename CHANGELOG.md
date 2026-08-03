@@ -477,7 +477,7 @@ docker compose exec backend npm run setup
 | 5     | Document Gathering & My Tasks                         | ✅ Complete  | Checklist item statuses, per-item upload, My Tasks view                              |
 | 6     | Company Documents, Profile & My Documents             | ✅ Complete  | Company profile, reusable company docs, personal uploads, task inbox                 |
 | 7     | Form Filling Engine                                   | ✅ Complete  | Overlay editor, auto-fill from profile, flattened PDF output, tender page extraction |
-| 8     | Signatures & Stamps                                   | ⏳ Pending   | Drag-and-place assets, flatten + immutable audit log                                 |
+| 8     | Signatures & Stamps                                   | ⏳ Next      | Drag-and-place assets, flatten + immutable audit log                                 |
 | 9     | Document Assembly & Ordering                          | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                                        |
 | 10    | Page Serialization                                    | ⏳ Pending   | 6-digit page stamp, physical-submission toggle                                       |
 | 11    | Final Submission                                      | ⏳ Pending   | Merge to PDF (physical) or named ZIP (digital), immutable record                     |
