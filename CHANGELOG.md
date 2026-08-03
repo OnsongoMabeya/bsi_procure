@@ -399,10 +399,13 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 #### Backend
 - **`backend/models/FormTemplate.js`** — immutable blank PDF template linked one-to-one with a fillable checklist item.
+- **`backend/utils/convertDocxToPdf.js`** — converts uploaded DOCX tender documents to PDF using LibreOffice headless so forms can be extracted from Word tenders.
+- **`backend/models/Tender.js`** — added `converted_document_path` / `converted_document_name` to cache the PDF conversion of DOCX uploads.
+- **`backend/routes/tenders.js`** — auto-converts DOCX tenders to PDF on upload and stores the converted path.
 - **`backend/routes/forms.js`**:
-  - `GET /api/forms/tenders/:id/checklist/:itemId` — returns the checklist item, existing template, and auto-fill values from Company Profile + tender data.
+  - `GET /api/forms/tenders/:id/checklist/:itemId` — returns the checklist item, existing template, auto-fill values, and the effective `tender_pdf_path`.
   - `POST /api/forms/tenders/:id/checklist/:itemId/template` — upload a standalone blank PDF template.
-  - `POST /api/forms/tenders/:id/checklist/:itemId/extract-template` — **slice a page range from the original tender PDF** into the checklist item's template.
+  - `POST /api/forms/tenders/:id/checklist/:itemId/extract-template` — **slice a page range from the original tender PDF** into the checklist item's template (falls back to on-demand DOCX→PDF conversion for existing Word tenders).
   - `POST /api/forms/tenders/:id/checklist/:itemId/flatten` — permanently embeds placed text into the template and saves a submission-ready PDF, updating the checklist item to `UPLOADED`.
 
 #### Frontend
@@ -411,12 +414,23 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
   - Click-to-place text fields with adjustable font size.
   - Auto-fill panel populated from Company Profile and tender fields.
   - Editable per-page field list.
-  - **Page-range extraction UI** that loads the tender PDF, shows thumbnails, and lets FL/INFO select start/end pages to create the blank template automatically.
+  - **Page-range extraction UI** that loads the tender PDF, shows thumbnails, lets FL/INFO select start/end pages, and previews the first selected page at high resolution.
+
+#### Infrastructure
+- **`Dockerfile.backend`** — installs LibreOffice plus font packages (`ttf-dejavu`, `ttf-liberation`, `font-noto`, `font-noto-cjk`, `font-noto-extra`) so converted PDFs embed legible glyphs.
+- **`frontend/scripts/copy-pdf-worker.js`** + **`frontend/package.json` postinstall** — copies `pdfjs-dist` worker to `public/` so it is served at a stable path.
+- **`nginx.frontend.conf`** — serves `.mjs` files with `application/javascript` MIME type so the worker loads correctly.
 
 ### Decisions made
 - **Templates are immutable**: once created, a checklist item's blank template is preserved; flattening always produces a separate output file.
 - **Form extraction is manual page-range selection**: the system does not attempt AI-based form boundary detection; the user visually picks the pages for each form inside the tender PDF.
 - **Auto-fill uses exact Company Profile fields** plus tender metadata; remaining fields are filled manually in the overlay editor.
+- **DOCX tenders are first-class**: Word documents are automatically converted to PDF on upload; existing Word tenders are converted on first extraction attempt.
+
+### Issues resolved during this phase
+- pdfjs-dist worker failed to load because it was requested from a hashed dynamic URL; fixed by serving `/pdf.worker.min.mjs` from `public/`.
+- DOCX conversion produced missing-glyph boxes; fixed by installing common font families in the backend image.
+- Extraction preview was either too small or too zoomed; final layout is side-by-side with a full-page, high-resolution preview on the left and thumbnail selector on the right.
 
 ### Intentionally stubbed / deferred
 - Signature and stamp placement → Phase 8.
@@ -470,3 +484,18 @@ docker compose exec backend npm run setup
 | 12    | WhatsApp Alerts                                       | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell                            |
 | 13    | Past Tenders & Archive                                | ⏳ Pending   | Searchable archive, full audit log view                                              |
 | 14    | Polish & Hardening                                    | ⏳ Pending   | Error handling, mobile responsiveness, security review                               |
+
+## What's next (roadmap)
+
+Following the spec strictly, the next phase to implement is **Phase 8 — Signatures & Stamps**. The remaining pipeline is:
+
+- **Phase 8 — Signatures & Stamps**: upload signature scans / company stamp images, drag-and-place them onto documents, flatten, and write an immutable audit log entry for every signing action.
+- **Phase 9 — Document Assembly & Ordering**: drag-and-drop ordering of checklist outputs, auto-generated Table of Contents, section cover pages.
+- **Phase 10 — Page Serialization**: 6-digit Bates-style page stamps, physical/digital submission mode toggle.
+- **Phase 11 — Final Submission**: merge all assembled documents into a single PDF (physical) or named ZIP (digital), create immutable submission record.
+- **Phase 12 — WhatsApp Alerts**: Meta Cloud API integration, deadline/escalation cron, in-app notification bell.
+- **Phase 13 — Past Tenders & Audit Archive**: searchable archive of completed tenders, full audit log viewer.
+- **Phase 14 — Polish & Hardening**: error boundaries, mobile responsiveness pass, security hardening, load testing, and deployment checklist.
+
+### Immediate next actionable step
+Start **Phase 8** by adding signature/stamp image upload, storage models, a placement UI, and backend flattening + audit-log endpoints.

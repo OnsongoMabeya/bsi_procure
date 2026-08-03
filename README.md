@@ -124,6 +124,15 @@ LLM_API_KEY=your-gemini-key-here
 
 The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept local-only, not pushed to GitHub).
 
+### Phase 7 highlights (just completed)
+- Overlay PDF form editor with click-to-place text fields and auto-fill from Company Profile + tender data.
+- Save filled forms as flattened PDFs.
+- Extract blank form templates directly from the tender PDF by selecting a page range.
+- DOCX tenders are automatically converted to PDF using LibreOffice with embedded fonts so extraction works for Word uploads.
+
+### Next phase
+**Phase 8 — Signatures & Stamps** is next: upload signature/stamp assets, drag-and-place them onto documents, flatten, and keep an immutable audit log.
+
 | Phase | Name                                                  | Status       |
 |-------|-------------------------------------------------------|--------------|
 | 0     | Scaffolding                                           | ✅ Complete  |
