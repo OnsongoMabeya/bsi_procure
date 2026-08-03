@@ -242,42 +242,46 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
           {canUploadTemplate ? (
             extractMode ? (
               <div style={styles.extractPanel}>
-                <h4 style={{ margin: '0 0 10px', color: '#153E90' }}>Extract pages from the tender PDF</h4>
+                <h4 style={{ margin: '0 0 6px', color: '#153E90' }}>Extract pages from the tender PDF</h4>
                 <p style={styles.subtitle}>Select the first and last page of this form inside the uploaded tender document.</p>
-                <div style={styles.extractControls}>
-                  <label style={styles.extractLabel}>Start page
-                    <input type="number" min={1} max={tenderPageCount || 1} value={extractStart} onChange={(e) => setExtractStart(Math.min(Math.max(1, Number(e.target.value) || 1), extractEnd))} style={styles.extractInput} />
-                  </label>
-                  <label style={styles.extractLabel}>End page
-                    <input type="number" min={extractStart} max={tenderPageCount || 1} value={extractEnd} onChange={(e) => setExtractEnd(Math.max(Math.min(Number(e.target.value) || 1, tenderPageCount || 1), extractStart))} style={styles.extractInput} />
-                  </label>
-                </div>
-                <div style={styles.previewBox}>
-                  <div style={styles.previewLabel}>Preview of first selected page ({extractStart})</div>
-                  <div style={styles.previewFrame}>
-                    <canvas ref={previewCanvasRef} style={styles.previewCanvas} />
+                <div style={styles.extractLayout}>
+                  <div style={styles.previewBox}>
+                    <div style={styles.previewLabel}>Preview of first selected page ({extractStart})</div>
+                    <div style={styles.previewFrame}>
+                      <canvas ref={previewCanvasRef} style={styles.previewCanvas} />
+                    </div>
                   </div>
-                </div>
-                <div style={styles.thumbnailGrid}>
-                  {tenderThumbnails.map(({ page, dataUrl }) => (
-                    <button
-                      key={page}
-                      onClick={() => selectPage(page)}
-                      style={{
-                        ...styles.thumbnail,
-                        borderColor: page >= extractStart && page <= extractEnd ? '#153E90' : '#e2e8f0',
-                        background: page >= extractStart && page <= extractEnd ? '#eff6ff' : '#fff',
-                      }}
-                      title={`Page ${page}`}
-                    >
-                      <img src={dataUrl} alt={`Page ${page}`} style={styles.thumbImg} />
-                      <span style={styles.thumbLabel}>{page}</span>
-                    </button>
-                  ))}
-                </div>
-                <div style={styles.extractActions}>
-                  <button disabled={extracting} onClick={extractTemplate} style={styles.primary}>{extracting ? 'Extracting…' : `Extract pages ${extractStart}-${extractEnd}`}</button>
-                  <button onClick={() => setExtractMode(false)} style={styles.secondary}>Cancel</button>
+                  <div style={styles.extractRight}>
+                    <div style={styles.extractControls}>
+                      <label style={styles.extractLabel}>Start page
+                        <input type="number" min={1} max={tenderPageCount || 1} value={extractStart} onChange={(e) => setExtractStart(Math.min(Math.max(1, Number(e.target.value) || 1), extractEnd))} style={styles.extractInput} />
+                      </label>
+                      <label style={styles.extractLabel}>End page
+                        <input type="number" min={extractStart} max={tenderPageCount || 1} value={extractEnd} onChange={(e) => setExtractEnd(Math.max(Math.min(Number(e.target.value) || 1, tenderPageCount || 1), extractStart))} style={styles.extractInput} />
+                      </label>
+                    </div>
+                    <div style={styles.thumbnailGrid}>
+                      {tenderThumbnails.map(({ page, dataUrl }) => (
+                        <button
+                          key={page}
+                          onClick={() => selectPage(page)}
+                          style={{
+                            ...styles.thumbnail,
+                            borderColor: page >= extractStart && page <= extractEnd ? '#153E90' : '#e2e8f0',
+                            background: page >= extractStart && page <= extractEnd ? '#eff6ff' : '#fff',
+                          }}
+                          title={`Page ${page}`}
+                        >
+                          <img src={dataUrl} alt={`Page ${page}`} style={styles.thumbImg} />
+                          <span style={styles.thumbLabel}>{page}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div style={styles.extractActions}>
+                      <button disabled={extracting} onClick={extractTemplate} style={styles.primary}>{extracting ? 'Extracting…' : `Extract pages ${extractStart}-${extractEnd}`}</button>
+                      <button onClick={() => setExtractMode(false)} style={styles.secondary}>Cancel</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -359,16 +363,18 @@ const styles = {
   viewerWrap: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }, toolbar: { padding: 12, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, borderBottom: '1px solid #e5e7eb' },
   primary: { background: '#153E90', color: '#fff', border: 0, borderRadius: 6, padding: '8px 12px', cursor: 'pointer', fontWeight: 700 }, secondary: { background: '#fff', color: '#153E90', border: '1px solid #93c5fd', borderRadius: 6, padding: '7px 10px', cursor: 'pointer' },
   templateActions: { display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 14 },
-  extractPanel: { textAlign: 'left', maxWidth: 700, margin: '0 auto', padding: '0 12px' },
-  extractControls: { display: 'flex', gap: 16, margin: '12px 0' },
+  extractPanel: { textAlign: 'left', margin: '0 auto', padding: '0 12px', maxWidth: 1500 },
+  extractLayout: { display: 'flex', gap: 20, alignItems: 'flex-start', justifyContent: 'center', flexWrap: 'wrap' },
+  previewBox: { flex: '1 1 520px', minWidth: 320, textAlign: 'center' },
+  previewLabel: { fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 8 },
+  previewFrame: { display: 'inline-block', background: '#fff', padding: 14, borderRadius: 8, boxShadow: '0 4px 18px rgba(15, 23, 42, .18)' },
+  previewCanvas: { display: 'block', maxWidth: '100%', height: 'auto', maxHeight: '70vh' },
+  extractRight: { flex: '0 1 420px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 12 },
+  extractControls: { display: 'flex', gap: 16 },
   extractLabel: { display: 'flex', flexDirection: 'column', gap: 4, fontWeight: 600, fontSize: 12, color: '#334155' },
   extractInput: { width: 90, padding: 6, border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 14 },
-  extractActions: { display: 'flex', gap: 10, marginTop: 14, justifyContent: 'center' },
-  previewBox: { margin: '12px 0', textAlign: 'center' },
-  previewLabel: { fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 8 },
-  previewFrame: { display: 'inline-block', background: '#fff', padding: 12, borderRadius: 8, boxShadow: '0 4px 18px rgba(15, 23, 42, .18)' },
-  previewCanvas: { display: 'block', maxWidth: '100%', height: 'auto', maxHeight: '52vh' },
-  thumbnailGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8, maxHeight: 320, overflowY: 'auto', padding: 10, background: '#f1f5f9', borderRadius: 8, marginTop: 8 },
+  extractActions: { display: 'flex', gap: 10, justifyContent: 'center' },
+  thumbnailGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8, maxHeight: '54vh', overflowY: 'auto', padding: 10, background: '#f1f5f9', borderRadius: 8 },
   thumbnail: { border: '2px solid #e2e8f0', borderRadius: 6, padding: 4, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
   thumbImg: { width: '100%', height: 'auto', display: 'block', borderRadius: 4 },
   thumbLabel: { fontSize: 11, color: '#64748b', fontWeight: 600 },
