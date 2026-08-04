@@ -6,6 +6,7 @@ const DOC_TYPES = [
   { value: 'certificate_of_incorporation', label: 'Certificate of Incorporation' },
   { value: 'cr12', label: 'CR12' },
   { value: 'company_stamp', label: 'Company Stamp' },
+  { value: 'ceo_signature', label: 'CEO Signature' },
   { value: 'director_signature', label: 'Director Signature' },
   { value: 'audited_accounts', label: 'Audited Accounts' },
   { value: 'kra_tcc', label: 'KRA Tax Compliance Certificate (TCC)' },

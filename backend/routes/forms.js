@@ -7,7 +7,9 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { authMiddleware, requireRole } from '../middleware/auth.js';
 import { uploadFormTemplate } from '../middleware/upload.js';
 import { convertDocxToPdf, isDocx, isPdf } from '../utils/convertDocxToPdf.js';
+import { recordAudit } from '../utils/auditLog.js';
 import ChecklistItem from '../models/ChecklistItem.js';
+import CompanyDocument from '../models/CompanyDocument.js';
 import CompanyProfile from '../models/CompanyProfile.js';
 import FormTemplate from '../models/FormTemplate.js';
 import Tender from '../models/Tender.js';
@@ -21,6 +23,8 @@ router.use(authMiddleware);
 
 const FULL_CHECKLIST_ROLES = ['CEO', 'GM', 'FL', 'INFO', 'ADMIN'];
 const TEMPLATE_ROLES = ['FL', 'INFO', 'ADMIN'];
+const SIGN_ROLES = ['INFO', 'ADMIN'];
+const SIGNATURE_DOC_TYPES = ['ceo_signature', 'director_signature', 'company_stamp'];
 
 function webPath(absPath) {
   return absPath.replace(/^(.*[\\/])?uploads[\\/]/, 'uploads/').replace(/\\/g, '/');
@@ -220,6 +224,82 @@ router.post('/tenders/:tenderId/checklist/:itemId/flatten', async (req, res) => 
       status: 'UPLOADED',
     });
     res.json({ message: 'Form flattened and saved for review', file_path: item.uploaded_document_path, file_name: outputName });
+  } catch (err) {
+    res.status(err.message.includes('not found') || err.message.includes('confirmed') ? 404 : 500).json({ error: err.message });
+  }
+});
+
+router.post('/tenders/:tenderId/checklist/:itemId/sign', requireRole(...SIGN_ROLES), async (req, res) => {
+  try {
+    const item = await getFormItem(req);
+    if (!item.uploaded_document_path) {
+      return res.status(400).json({ error: 'Fill and flatten the form before placing signatures or stamps' });
+    }
+    const placements = Array.isArray(req.body.placements) ? req.body.placements : [];
+    if (placements.length === 0) {
+      return res.status(400).json({ error: 'Place at least one signature or stamp before confirming' });
+    }
+
+    const assetIds = [...new Set(placements.map((p) => Number(p.asset_id)))];
+    const assets = await CompanyDocument.findAll({
+      where: { id: assetIds, doc_type: SIGNATURE_DOC_TYPES },
+    });
+    const assetsById = new Map(assets.map((a) => [a.id, a]));
+
+    const pdfBytes = await fs.readFile(path.join(__dirname, '..', item.uploaded_document_path));
+    const pdf = await PDFDocument.load(pdfBytes);
+    const pages = pdf.getPages();
+    const embeddedCache = new Map();
+
+    for (const placement of placements) {
+      const asset = assetsById.get(Number(placement.asset_id));
+      const page = pages[Number(placement.page)];
+      if (!asset || !asset.file_path || !page) continue;
+
+      let embedded = embeddedCache.get(asset.id);
+      if (!embedded) {
+        const assetBytes = await fs.readFile(path.join(__dirname, '..', asset.file_path));
+        embedded = asset.file_path.toLowerCase().endsWith('.jpg') || asset.file_path.toLowerCase().endsWith('.jpeg')
+          ? await pdf.embedJpg(assetBytes)
+          : await pdf.embedPng(assetBytes);
+        embeddedCache.set(asset.id, embedded);
+      }
+
+      const { width, height } = page.getSize();
+      const w = Math.max(0.02, Math.min(1, Number(placement.width) || 0.18)) * width;
+      const h = Math.max(0.02, Math.min(1, Number(placement.height) || 0.09)) * height;
+      const x = Math.max(0, Math.min(1, Number(placement.x) || 0)) * width;
+      const y = height - (Math.max(0, Math.min(1, Number(placement.y) || 0)) * height) - h;
+
+      page.drawImage(embedded, { x, y: Math.max(0, y), width: w, height: h });
+
+      await recordAudit({
+        userId: req.user.id,
+        action: 'SIGNATURE_PLACED',
+        entityType: 'checklist_item',
+        entityId: item.id,
+        tenderId: item.tender_id,
+        metadata: {
+          asset_id: asset.id,
+          asset_label: asset.label,
+          asset_doc_type: asset.doc_type,
+          form_reference: item.form_reference,
+          form_name: item.name,
+          page: Number(placement.page),
+        },
+      });
+    }
+
+    await fs.mkdir(outputDir, { recursive: true });
+    const outputName = `signed_${Date.now()}_${safeFileName(item.form_reference || item.name)}.pdf`;
+    const outputPath = path.join(outputDir, outputName);
+    await fs.writeFile(outputPath, await pdf.save());
+    await item.update({
+      uploaded_document_path: webPath(outputPath),
+      uploaded_document_name: outputName,
+    });
+
+    res.json({ message: 'Signatures and stamps flattened onto the form', file_path: item.uploaded_document_path, file_name: outputName });
   } catch (err) {
     res.status(err.message.includes('not found') || err.message.includes('confirmed') ? 404 : 500).json({ error: err.message });
   }

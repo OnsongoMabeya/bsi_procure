@@ -12,6 +12,7 @@ const CompanyDocument = sequelize.define('CompanyDocument', {
       'certificate_of_incorporation',
       'cr12',
       'company_stamp',
+      'ceo_signature',
       'director_signature',
       'audited_accounts',
       'kra_tcc',

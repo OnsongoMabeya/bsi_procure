@@ -124,14 +124,14 @@ LLM_API_KEY=your-gemini-key-here
 
 The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept local-only, not pushed to GitHub).
 
-### Phase 7 highlights (just completed)
-- Overlay PDF form editor with click-to-place text fields and auto-fill from Company Profile + tender data.
-- Save filled forms as flattened PDFs.
-- Extract blank form templates directly from the tender PDF by selecting a page range.
-- DOCX tenders are automatically converted to PDF using LibreOffice with embedded fonts so extraction works for Word uploads.
+### Phase 8 highlights (just completed)
+- Sign & Stamp workspace in the form editor: drag-and-place CEO/Director signature and Company Stamp assets onto a flattened form (front-of-text), resize by dragging the corner handle.
+- "Confirm & Flatten Signatures" burns the placements into the PDF and writes one immutable `audit_log` entry per placement (user, form, tender, asset, timestamp).
+- New `GET /api/audit-log` endpoint (ADMIN/FL/INFO) for reading the audit trail.
+- **Before testing:** upload CEO Signature / Director Signature / Company Stamp PNGs via the Company Documents tab first — no signature assets exist by default.
 
 ### Next phase
-**Phase 8 — Signatures & Stamps** is next: upload signature/stamp assets, drag-and-place them onto documents, flatten, and keep an immutable audit log.
+**Phase 9 — Document Assembly & Ordering** is next: drag-and-drop reordering of approved documents (FL/INFO, no lock) and an auto-generated Table of Contents.
 
 | Phase | Name                                                  | Status       |
 |-------|-------------------------------------------------------|--------------|
@@ -143,8 +143,8 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 | 5     | Document Gathering & My Tasks                         | ✅ Complete  |
 | 6     | Company Documents, Profile & My Documents             | ✅ Complete  |
 | 7     | Form Filling Engine                                   | ✅ Complete  |
-| 8     | Signatures & Stamps                                   | ⏳ Next      |
-| 9     | Document Assembly & Ordering                          | ⏳ Pending   |
+| 8     | Signatures & Stamps                                   | ✅ Complete  |
+| 9     | Document Assembly & Ordering                          | ⏳ Next      |
 | 10    | Page Serialization                                    | ⏳ Pending   |
 | 11    | Final Submission                                      | ⏳ Pending   |
 | 12    | WhatsApp Alerts                                       | ⏳ Pending   |

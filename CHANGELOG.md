@@ -437,6 +437,41 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 ---
 
+## Phase 8 — Signatures & Stamps ✅
+**Date completed:** 2026-08-04
+
+### What was built
+
+#### Backend
+- **`backend/models/AuditLog.js`** — immutable audit log table matching the spec's schema (`user_id, action, entity_type, entity_id, tender_id, metadata, timestamp`).
+- **`backend/utils/auditLog.js`** — `recordAudit()` helper to write audit entries.
+- **`backend/routes/auditLog.js`** — `GET /api/audit-log` (ADMIN/FL/INFO only), filterable by `tender_id`, `entity_type`, `entity_id`.
+- **`backend/models/CompanyDocument.js`** — added `ceo_signature` doc_type (previously only `director_signature`/`company_stamp` existed), so CEO and Director signatures are distinct assets per the spec.
+- **`backend/routes/forms.js`** — `POST /tenders/:id/checklist/:itemId/sign`: embeds one or more signature/stamp PNGs (front-of-text) onto the already-flattened form PDF at normalized page positions/sizes, saves a new `signed_*.pdf` output, and writes one `audit_log` row per placement (user, form, tender, asset, timestamp). Restricted to `INFO`/`ADMIN` (the roles table assigns "stamping" to `INFO`).
+
+#### Frontend
+- **`frontend/src/components/FormEditor.jsx`** — new **Sign & Stamp** workspace:
+  - Side panel lists CEO/Director signature and Company stamp assets from Company Documents.
+  - Click an asset, click the form to place it; drag to reposition, drag the corner handle to resize.
+  - "Confirm & Flatten Signatures" burns the placements into the PDF and shows the resulting audit trail.
+  - Automatically entered right after a text-flatten (for INFO/ADMIN); also reachable via a "Sign & Stamp →" button once a form has been flattened.
+- **`frontend/src/pages/CompanyDocumentsPage.jsx`** — added "CEO Signature" to the document type selector.
+
+### Decisions made
+- **Signing/stamping restricted to `INFO`/`ADMIN`**, distinct from `TEMPLATE_ROLES` (`FL/INFO/ADMIN`) used for form filling — the spec's role table assigns "stamping" specifically to `INFO`.
+- **Added `ceo_signature` as a `CompanyDocument.doc_type`** since the spec explicitly separates CEO signature from Director signatures, but the existing enum only had `director_signature`.
+- **Audit trail read access** reuses `GET /api/audit-log` rather than building a dedicated archive page — the full searchable audit archive is Phase 13's scope; Phase 8 only needed to prove the trail is correctly recorded.
+
+### Issue found and fixed during this phase (infrastructure, not scoped to Phase 8)
+- `backend/models/User.js`'s `email` column used `unique: true` without a stable index name. Every `sequelize.sync({ alter: true })` run (i.e. every backend container restart) created a **new** duplicate unique index (`email`, `email_2`, `email_3`, …) instead of detecting the existing one. After ~5 weeks of restarts this hit MySQL's 64-key-per-table limit and made **all** DB sync fail silently (`Too many keys specified`), which would have blocked the new `audit_log` table too.
+  - **Fix:** gave the constraint an explicit name (`unique: 'users_email_unique'`), dropped the 62 duplicate indexes, and verified across two consecutive restarts that no new duplicate is created.
+
+### Intentionally stubbed / deferred
+- Full audit log browsing UI (search/filter across all tenders) → Phase 13 (Past Tenders & Archive).
+- Cryptographic/PKI digital signatures — spec explicitly scopes Phase 1 to image-based signature overlay only.
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts
@@ -477,8 +512,8 @@ docker compose exec backend npm run setup
 | 5     | Document Gathering & My Tasks                         | ✅ Complete  | Checklist item statuses, per-item upload, My Tasks view                              |
 | 6     | Company Documents, Profile & My Documents             | ✅ Complete  | Company profile, reusable company docs, personal uploads, task inbox                 |
 | 7     | Form Filling Engine                                   | ✅ Complete  | Overlay editor, auto-fill from profile, flattened PDF output, tender page extraction |
-| 8     | Signatures & Stamps                                   | ⏳ Next      | Drag-and-place assets, flatten + immutable audit log                                 |
-| 9     | Document Assembly & Ordering                          | ⏳ Pending   | Drag-and-drop reorder, auto Table of Contents                                        |
+| 8     | Signatures & Stamps                                   | ✅ Complete  | Drag-and-place CEO/Director signatures + stamp, flatten + immutable audit log        |
+| 9     | Document Assembly & Ordering                          | ⏳ Next      | Drag-and-drop reorder, auto Table of Contents                                        |
 | 10    | Page Serialization                                    | ⏳ Pending   | 6-digit page stamp, physical-submission toggle                                       |
 | 11    | Final Submission                                      | ⏳ Pending   | Merge to PDF (physical) or named ZIP (digital), immutable record                     |
 | 12    | WhatsApp Alerts                                       | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell                            |
@@ -487,15 +522,17 @@ docker compose exec backend npm run setup
 
 ## What's next (roadmap)
 
-Following the spec strictly, the next phase to implement is **Phase 8 — Signatures & Stamps**. The remaining pipeline is:
+Following the spec strictly, the next phase to implement is **Phase 9 — Document Assembly & Ordering**. The remaining pipeline is:
 
-- **Phase 8 — Signatures & Stamps**: upload signature scans / company stamp images, drag-and-place them onto documents, flatten, and write an immutable audit log entry for every signing action.
 - **Phase 9 — Document Assembly & Ordering**: drag-and-drop ordering of checklist outputs, auto-generated Table of Contents, section cover pages.
 - **Phase 10 — Page Serialization**: 6-digit Bates-style page stamps, physical/digital submission mode toggle.
 - **Phase 11 — Final Submission**: merge all assembled documents into a single PDF (physical) or named ZIP (digital), create immutable submission record.
 - **Phase 12 — WhatsApp Alerts**: Meta Cloud API integration, deadline/escalation cron, in-app notification bell.
-- **Phase 13 — Past Tenders & Audit Archive**: searchable archive of completed tenders, full audit log viewer.
+- **Phase 13 — Past Tenders & Audit Archive**: searchable archive of completed tenders, full audit log viewer (the `GET /api/audit-log` endpoint already exists from Phase 8; this phase builds the browsing UI).
 - **Phase 14 — Polish & Hardening**: error boundaries, mobile responsiveness pass, security hardening, load testing, and deployment checklist.
 
 ### Immediate next actionable step
-Start **Phase 8** by adding signature/stamp image upload, storage models, a placement UI, and backend flattening + audit-log endpoints.
+Start **Phase 9** by adding drag-and-drop reordering (FL/INFO, no lock) of approved checklist documents and an auto-generated Table of Contents.
+
+### Before testing Phase 8
+No CEO/Director signature or company stamp PNG assets exist yet in `company_documents`. Upload them via the **Company Documents** tab (types: "CEO Signature", "Director Signature", "Company Stamp") before opening the Sign & Stamp workspace on a flattened form.

@@ -12,6 +12,7 @@ import companyDocumentsRoutes from './routes/companyDocuments.js';
 import myDocumentsRoutes from './routes/myDocuments.js';
 import formsRoutes from './routes/forms.js';
 import aiRoutes from './routes/ai.js';
+import auditLogRoutes from './routes/auditLog.js';
 import User from './models/User.js';
 import Tender from './models/Tender.js';
 import ChecklistItem from './models/ChecklistItem.js';
@@ -22,6 +23,7 @@ import CompanyDocument from './models/CompanyDocument.js';
 import CompanyDocumentVersion from './models/CompanyDocumentVersion.js';
 import UserDocument from './models/UserDocument.js';
 import FormTemplate from './models/FormTemplate.js';
+import AuditLog from './models/AuditLog.js';
 
 User.hasMany(Tender, { foreignKey: 'uploaded_by', as: 'createdTenders' });
 Tender.belongsTo(User, { foreignKey: 'uploaded_by', as: 'creator' });
@@ -43,6 +45,9 @@ UserDocument.belongsTo(User, { foreignKey: 'owner_id', as: 'owner' });
 ChecklistItem.hasOne(FormTemplate, { foreignKey: 'checklist_item_id', as: 'formTemplate' });
 FormTemplate.belongsTo(ChecklistItem, { foreignKey: 'checklist_item_id', as: 'checklistItem' });
 FormTemplate.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
+
+User.hasMany(AuditLog, { foreignKey: 'user_id', as: 'auditLogs' });
+AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -71,6 +76,7 @@ app.use('/api/company-documents', companyDocumentsRoutes);
 app.use('/api/my-documents', myDocumentsRoutes);
 app.use('/api/forms', formsRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/audit-log', auditLogRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 sequelize.sync({ alter: true })

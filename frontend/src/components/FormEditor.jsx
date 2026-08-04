@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 const TEMPLATE_ROLES = ['FL', 'INFO', 'ADMIN'];
+const SIGN_ROLES = ['INFO', 'ADMIN'];
 
 export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
   const { user, token } = useAuth();
@@ -29,6 +30,19 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
   const [extractEnd, setExtractEnd] = useState(1);
   const fileInputRef = useRef(null);
   const previewCanvasRef = useRef(null);
+
+  const [signMode, setSignMode] = useState(false);
+  const [signAssets, setSignAssets] = useState([]);
+  const [signAssetsError, setSignAssetsError] = useState('');
+  const [armedAssetId, setArmedAssetId] = useState(null);
+  const [signPdf, setSignPdf] = useState(null);
+  const [signPageCount, setSignPageCount] = useState(0);
+  const [signPageNumber, setSignPageNumber] = useState(0);
+  const [placements, setPlacements] = useState([]);
+  const [signing, setSigning] = useState(false);
+  const [auditTrail, setAuditTrail] = useState([]);
+  const signCanvasRef = useRef(null);
+  const signFrameRef = useRef(null);
 
   const request = async (path, options = {}) => {
     const res = await fetch(`/api/forms${path}`, {
@@ -126,8 +140,14 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields }),
       });
-      setMessage('Filled PDF flattened and sent for review.');
-      onSaved?.(data);
+      await loadForm();
+      if (SIGN_ROLES.includes(user?.role)) {
+        setMessage('Filled PDF flattened. You can now sign and stamp it.');
+        await openSignMode(data.file_path);
+      } else {
+        setMessage('Filled PDF flattened and sent for review.');
+        onSaved?.(data);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -135,7 +155,150 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
     }
   };
 
+  const loadSignatureAssets = async () => {
+    setSignAssetsError('');
+    try {
+      const res = await fetch('/api/company-documents', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to load signature assets');
+      setSignAssets(data.filter((d) => ['ceo_signature', 'director_signature', 'company_stamp'].includes(d.doc_type) && d.file_path));
+    } catch (err) {
+      setSignAssetsError(err.message);
+    }
+  };
+
+  const loadAuditTrail = async () => {
+    try {
+      const res = await fetch(`/api/audit-log?entity_type=checklist_item&entity_id=${itemId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setAuditTrail(data);
+    } catch {
+      // non-fatal: audit trail is a convenience view, not required to sign
+    }
+  };
+
+  const openSignMode = async (filePath) => {
+    setSignMode(true);
+    setError('');
+    setPlacements([]);
+    setArmedAssetId(null);
+    await Promise.all([loadSignatureAssets(), loadAuditTrail()]);
+    try {
+      const pdf = await getDocument(`/${filePath}`).promise;
+      setSignPdf(pdf);
+      setSignPageCount(pdf.numPages);
+      setSignPageNumber(0);
+    } catch (err) {
+      setError(`Unable to load the filled PDF: ${err.message}`);
+    }
+  };
+
+  useEffect(() => {
+    if (!signMode || !signPdf) return undefined;
+    let cancelled = false;
+    const render = async () => {
+      try {
+        const page = await signPdf.getPage(signPageNumber + 1);
+        const viewport = page.getViewport({ scale: 1.45 });
+        const canvas = signCanvasRef.current;
+        if (!canvas || cancelled) return;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      } catch (err) {
+        if (!cancelled) setError(`Unable to render page: ${err.message}`);
+      }
+    };
+    render();
+    return () => { cancelled = true; };
+  }, [signMode, signPdf, signPageNumber]);
+
+  const placeAsset = (event) => {
+    if (!armedAssetId) return;
+    const asset = signAssets.find((a) => a.id === armedAssetId);
+    if (!asset) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width;
+    const y = (event.clientY - bounds.top) / bounds.height;
+    setPlacements((current) => [...current, {
+      id: crypto.randomUUID(),
+      asset_id: asset.id,
+      label: asset.label,
+      file_path: asset.file_path,
+      page: signPageNumber,
+      x: Math.max(0, Math.min(0.82, x - 0.09)),
+      y: Math.max(0, Math.min(0.91, y - 0.045)),
+      width: 0.18,
+      height: 0.09,
+    }]);
+    setArmedAssetId(null);
+  };
+
+  const removePlacement = (id) => setPlacements((current) => current.filter((p) => p.id !== id));
+
+  const beginDrag = (id, mode) => (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    const frame = signFrameRef.current;
+    const orig = placements.find((p) => p.id === id);
+    if (!frame || !orig) return;
+    const bounds = frame.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+
+    const onMove = (e) => {
+      const dx = (e.clientX - startX) / bounds.width;
+      const dy = (e.clientY - startY) / bounds.height;
+      setPlacements((current) => current.map((p) => {
+        if (p.id !== id) return p;
+        if (mode === 'move') {
+          return {
+            ...p,
+            x: Math.max(0, Math.min(1 - orig.width, orig.x + dx)),
+            y: Math.max(0, Math.min(1 - orig.height, orig.y + dy)),
+          };
+        }
+        return {
+          ...p,
+          width: Math.max(0.04, Math.min(1 - orig.x, orig.width + dx)),
+          height: Math.max(0.03, Math.min(1 - orig.y, orig.height + dy)),
+        };
+      }));
+    };
+
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  const confirmSignatures = async () => {
+    if (!placements.length) { setError('Place at least one signature or stamp before confirming.'); return; }
+    setSigning(true);
+    setError('');
+    try {
+      const data = await request(`/tenders/${tenderId}/checklist/${itemId}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          placements: placements.map(({ asset_id, page, x, y, width, height }) => ({ asset_id, page, x, y, width, height })),
+        }),
+      });
+      setMessage('Signatures and stamps flattened onto the form.');
+      await loadForm();
+      await openSignMode(data.file_path);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSigning(false);
+    }
+  };
+
   const canUploadTemplate = TEMPLATE_ROLES.includes(user?.role);
+  const canSign = SIGN_ROLES.includes(user?.role);
 
   const tenderDocumentPath = form?.tender_pdf_path;
 
@@ -235,7 +398,84 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
       {error && <div style={styles.error}>{error}</div>}
       {message && <div style={styles.message}>{message}</div>}
 
-      {!form?.template ? (
+      {signMode ? (
+        <div style={styles.workspace}>
+          <aside style={styles.panel}>
+            <div style={styles.autofillHeader}>Signature &amp; Stamp Assets</div>
+            {signAssetsError && <div style={styles.error}>{signAssetsError}</div>}
+            {signAssets.length === 0 ? (
+              <p style={styles.subtitle}>No signature/stamp assets found. Ask ADMIN to upload CEO/Director signatures or the company stamp under Company Documents.</p>
+            ) : (
+              <div style={styles.assetGrid}>
+                {signAssets.map((asset) => (
+                  <button
+                    key={asset.id}
+                    onClick={() => setArmedAssetId(asset.id)}
+                    style={{ ...styles.assetThumb, borderColor: armedAssetId === asset.id ? '#153E90' : '#e2e8f0' }}
+                    title={asset.label}
+                  >
+                    <img src={`/${asset.file_path}`} alt={asset.label} style={styles.assetImg} />
+                    <span style={styles.thumbLabel}>{asset.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p style={styles.subtitle}>
+              {armedAssetId ? 'Click the form to place the selected asset.' : 'Select an asset above, then click the form to place it. Drag to reposition, drag the corner handle to resize.'}
+            </p>
+
+            <div style={styles.fieldHeader}>Placed on this page ({placements.filter((p) => p.page === signPageNumber).length})</div>
+            <div style={styles.fieldList}>
+              {placements.filter((p) => p.page === signPageNumber).map((p) => (
+                <div key={p.id} style={styles.fieldRow}>
+                  <span style={styles.fieldInput}>{p.label}</span>
+                  <button onClick={() => removePlacement(p.id)} style={styles.delete}>×</button>
+                </div>
+              ))}
+            </div>
+
+            {auditTrail.length > 0 && (
+              <>
+                <div style={styles.fieldHeader}>Audit Trail</div>
+                <div style={styles.auditList}>
+                  {auditTrail.map((log) => (
+                    <div key={log.id} style={styles.auditRow}>
+                      <strong>{log.user?.name || 'User'}</strong> placed <em>{log.metadata?.asset_label || 'an asset'}</em>
+                      <div style={styles.auditMeta}>{new Date(log.timestamp).toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </aside>
+
+          <div style={styles.viewerWrap}>
+            <div style={styles.toolbar}>
+              <button disabled={signPageNumber === 0} onClick={() => setSignPageNumber((p) => p - 1)} style={styles.secondary}>← Previous</button>
+              <span>Page {signPageNumber + 1} of {signPageCount}</span>
+              <button disabled={signPageNumber >= signPageCount - 1} onClick={() => setSignPageNumber((p) => p + 1)} style={styles.secondary}>Next →</button>
+              <button disabled={signing || placements.length === 0} onClick={confirmSignatures} style={styles.primary}>{signing ? 'Saving…' : 'Confirm & Flatten Signatures'}</button>
+              <button onClick={() => { setSignMode(false); onSaved?.(form); }} style={styles.secondary}>Done</button>
+            </div>
+            <div style={styles.canvasScroll}>
+              <div ref={signFrameRef} style={styles.canvasFrame} onClick={placeAsset}>
+                <canvas ref={signCanvasRef} style={styles.canvas} />
+                {placements.filter((p) => p.page === signPageNumber).map((p) => (
+                  <div
+                    key={p.id}
+                    onMouseDown={beginDrag(p.id, 'move')}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ ...styles.placement, left: `${p.x * 100}%`, top: `${p.y * 100}%`, width: `${p.width * 100}%`, height: `${p.height * 100}%` }}
+                  >
+                    <img src={`/${p.file_path}`} alt={p.label} style={styles.placementImg} />
+                    <div onMouseDown={beginDrag(p.id, 'resize')} style={styles.resizeHandle} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : !form?.template ? (
         <div style={styles.templateState}>
           <h3 style={{ marginTop: 0 }}>Blank PDF template required</h3>
           <p style={styles.subtitle}>The original template is preserved separately from the flattened output.</p>
@@ -329,6 +569,9 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
               <span>Page {pageNumber + 1} of {pageCount}</span>
               <button disabled={pageNumber >= pageCount - 1} onClick={() => setPageNumber((p) => p + 1)} style={styles.secondary}>Next →</button>
               <button disabled={saving} onClick={flatten} style={styles.primary}>{saving ? 'Flattening…' : 'Flatten & Save'}</button>
+              {canSign && form?.item?.uploaded_document_path && (
+                <button onClick={() => openSignMode(form.item.uploaded_document_path)} style={styles.secondary}>Sign &amp; Stamp →</button>
+              )}
             </div>
             <div style={styles.canvasScroll}>
               <div style={styles.canvasFrame} onClick={addField}>
@@ -380,4 +623,13 @@ const styles = {
   thumbLabel: { fontSize: 11, color: '#64748b', fontWeight: 600 },
   canvasScroll: { flex: 1, overflow: 'auto', padding: 24, background: '#e2e8f0', textAlign: 'center' }, canvasFrame: { display: 'inline-block', position: 'relative', cursor: 'crosshair', lineHeight: 0, boxShadow: '0 4px 18px rgba(15, 23, 42, .22)', background: '#fff' }, canvas: { display: 'block', maxWidth: '100%', height: 'auto' },
   overlayText: { position: 'absolute', lineHeight: 1.2, color: '#111827', whiteSpace: 'pre-wrap', textAlign: 'left', pointerEvents: 'none', transform: 'translateY(-10%)' }, rendering: { position: 'absolute', inset: 0, zIndex: 2, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,.8)', color: '#153E90', fontWeight: 700 },
+  assetGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 10 },
+  assetThumb: { border: '2px solid #e2e8f0', borderRadius: 6, padding: 6, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: '#fff' },
+  assetImg: { width: '100%', height: 48, objectFit: 'contain', display: 'block' },
+  placement: { position: 'absolute', cursor: 'move', zIndex: 5 },
+  placementImg: { width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', display: 'block' },
+  resizeHandle: { position: 'absolute', right: -4, bottom: -4, width: 12, height: 12, background: '#153E90', borderRadius: 3, cursor: 'nwse-resize' },
+  auditList: { display: 'grid', gap: 6, maxHeight: 160, overflowY: 'auto' },
+  auditRow: { fontSize: 12, color: '#334155', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: 6 },
+  auditMeta: { fontSize: 10, color: '#94a3b8', marginTop: 2 },
 };
