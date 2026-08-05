@@ -129,6 +129,7 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 - "Confirm & Flatten Signatures" burns the placements into the PDF and writes one immutable `audit_log` entry per placement (user, form, tender, asset, timestamp).
 - New `GET /api/audit-log` endpoint (ADMIN/FL/INFO) for reading the audit trail.
 - **Before testing:** upload CEO Signature / Director Signature / Company Stamp PNGs via the Company Documents tab first — no signature assets exist by default.
+- **Reselect Pages** (post-Phase-8 enhancement): a form's extracted page range can be changed after the fact via the "Reselect Pages" button in the form editor toolbar. This replaces the template and clears placed fields and flattened/signed output.
 
 ### Next phase
 **Phase 9 — Document Assembly & Ordering** is next: drag-and-drop reordering of approved documents (FL/INFO, no lock) and an auto-generated Table of Contents.

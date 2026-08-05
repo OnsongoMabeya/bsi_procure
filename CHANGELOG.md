@@ -472,6 +472,22 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 ---
 
+## Post-Phase-8 Enhancement — Reselect Form Pages ✅
+**Date completed:** 2026-08-05
+
+### What was built
+- **`backend/routes/forms.js`** — `POST /tenders/:id/checklist/:itemId/extract-template` no longer rejects with 409 when a template already exists. It now **replaces** the template: deletes the old template file and DB record, and resets the checklist item (status → `PENDING`, flattened output cleared) since prior output is invalid once the underlying pages change.
+- **`frontend/src/components/FormEditor.jsx`** — new **Reselect Pages** button in the fill-workspace toolbar (FL/INFO/ADMIN, shown when the tender has a source PDF). It reopens the page-selection UI (thumbnails + legible first-page preview) with a "Reselect form pages" heading, clears placed fields, and resets the page index after extraction. Cancel returns to the fill workspace unchanged.
+
+### Behaviour notes
+- Reselecting pages is destructive by design: placed text fields, flattened output, and any signed output are cleared because they were based on the old pages.
+- Manually uploaded templates (via "Upload Blank PDF Template") are still one-shot — only tender-page extraction supports replacement.
+
+### Bug fixed during this enhancement
+- The extraction UI was only rendered inside the "no template yet" branch, so clicking Reselect Pages set `extractMode` but nothing appeared. The render branch is now `extractMode || !form?.template`.
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts
