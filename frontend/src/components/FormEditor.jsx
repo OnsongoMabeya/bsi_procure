@@ -373,8 +373,10 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ start_page: extractStart, end_page: extractEnd }),
       });
-      setMessage(`Extracted pages ${extractStart}-${extractEnd} from the tender into the blank template.`);
+      setMessage(`Replaced template with pages ${extractStart}-${extractEnd} from the tender. Any previously placed fields or flattened output were cleared.`);
       setExtractMode(false);
+      setPageNumber(0);
+      setFields([]);
       await loadForm();
     } catch (err) {
       setError(err.message);
@@ -475,10 +477,10 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
             </div>
           </div>
         </div>
-      ) : !form?.template ? (
+      ) : (extractMode || !form?.template) ? (
         <div style={styles.templateState}>
-          <h3 style={{ marginTop: 0 }}>Blank PDF template required</h3>
-          <p style={styles.subtitle}>The original template is preserved separately from the flattened output.</p>
+          <h3 style={{ marginTop: 0 }}>{form?.template ? 'Reselect form pages' : 'Blank PDF template required'}</h3>
+          <p style={styles.subtitle}>{form?.template ? 'Pick a new page range from the tender document. This replaces the current template and clears placed fields and flattened output.' : 'Upload a blank PDF or extract the form pages from the tender document. You can reselect the page range later if needed.'}</p>
           {canUploadTemplate ? (
             extractMode ? (
               <div style={styles.extractPanel}>
@@ -519,7 +521,7 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
                     </div>
                     <div style={styles.extractActions}>
                       <button disabled={extracting} onClick={extractTemplate} style={styles.primary}>{extracting ? 'Extracting…' : `Extract pages ${extractStart}-${extractEnd}`}</button>
-                      <button onClick={() => setExtractMode(false)} style={styles.secondary}>Cancel</button>
+                      <button onClick={() => { setExtractMode(false); setPageNumber(0); }} style={styles.secondary}>Cancel</button>
                     </div>
                   </div>
                 </div>
@@ -569,6 +571,9 @@ export default function FormEditor({ tenderId, itemId, onClose, onSaved }) {
               <span>Page {pageNumber + 1} of {pageCount}</span>
               <button disabled={pageNumber >= pageCount - 1} onClick={() => setPageNumber((p) => p + 1)} style={styles.secondary}>Next →</button>
               <button disabled={saving} onClick={flatten} style={styles.primary}>{saving ? 'Flattening…' : 'Flatten & Save'}</button>
+              {canUploadTemplate && tenderDocumentPath && (
+                <button onClick={() => { setFields([]); openExtraction(); }} style={styles.secondary}>Reselect Pages</button>
+              )}
               {canSign && form?.item?.uploaded_document_path && (
                 <button onClick={() => openSignMode(form.item.uploaded_document_path)} style={styles.secondary}>Sign &amp; Stamp →</button>
               )}

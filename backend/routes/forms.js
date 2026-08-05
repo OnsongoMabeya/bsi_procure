@@ -140,7 +140,23 @@ router.post('/tenders/:tenderId/checklist/:itemId/extract-template', requireRole
   try {
     const item = await getFormItem(req);
     const existing = await FormTemplate.findOne({ where: { checklist_item_id: item.id } });
-    if (existing) return res.status(409).json({ error: 'A template already exists for this form. Create a new checklist item to use another template.' });
+    if (existing) {
+      // Remove the old template file on disk, then the DB record. Any flattened output is
+      // invalid because the underlying pages changed, so reset the item as well.
+      try {
+        await fs.unlink(path.join(__dirname, '..', existing.file_path));
+      } catch {
+        // ignore missing-file errors
+      }
+      await existing.destroy();
+      await item.update({
+        status: 'PENDING',
+        uploaded_document_path: null,
+        uploaded_document_name: null,
+        uploaded_by: null,
+        uploaded_at: null,
+      });
+    }
 
     const tenderPath = await resolveTenderPdfPath(item.tender);
     if (!tenderPath) return res.status(400).json({ error: 'Tender has no uploaded source document to extract from' });
