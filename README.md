@@ -124,15 +124,19 @@ LLM_API_KEY=your-gemini-key-here
 
 The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept local-only, not pushed to GitHub).
 
-### Phase 8 highlights (just completed)
-- Sign & Stamp workspace in the form editor: drag-and-place CEO/Director signature and Company Stamp assets onto a flattened form (front-of-text), resize by dragging the corner handle.
-- "Confirm & Flatten Signatures" burns the placements into the PDF and writes one immutable `audit_log` entry per placement (user, form, tender, asset, timestamp).
-- New `GET /api/audit-log` endpoint (ADMIN/FL/INFO) for reading the audit trail.
-- **Before testing:** upload CEO Signature / Director Signature / Company Stamp PNGs via the Company Documents tab first — no signature assets exist by default.
-- **Reselect Pages** (post-Phase-8 enhancement): a form's extracted page range can be changed after the fact via the "Reselect Pages" button in the form editor toolbar. This replaces the template and clears placed fields and flattened/signed output.
+### Phase 9 highlights (just completed)
+- Drag-and-drop reordering of approved checklist documents (FL/INFO/ADMIN can reorder; others see read-only view).
+- Auto-generated Table of Contents PDF with document names, form references, start pages, and page counts.
+- File-name preview showing how documents will be named based on the new assembly order.
+- Assembly order is independent of checklist order — reordering documents does not affect the checklist display.
+- Up/Down buttons provide keyboard-friendly reordering as an alternative to drag-and-drop.
+
+### Previous phases
+- **Phase 8 — Signatures & Stamps**: Sign & Stamp workspace in the form editor with drag-and-place CEO/Director signatures and Company Stamp assets, immutable audit log.
+- **Reselect Pages** (post-Phase-8 enhancement): a form's extracted page range can be changed after the fact via the "Reselect Pages" button in the form editor toolbar.
 
 ### Next phase
-**Phase 9 — Document Assembly & Ordering** is next: drag-and-drop reordering of approved documents (FL/INFO, no lock) and an auto-generated Table of Contents.
+**Phase 10 — Page Serialization** is next: 6-digit Bates-style page stamps and a physical/digital submission mode toggle.
 
 | Phase | Name                                                  | Status       |
 |-------|-------------------------------------------------------|--------------|
@@ -145,8 +149,8 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 | 6     | Company Documents, Profile & My Documents             | ✅ Complete  |
 | 7     | Form Filling Engine                                   | ✅ Complete  |
 | 8     | Signatures & Stamps                                   | ✅ Complete  |
-| 9     | Document Assembly & Ordering                          | ⏳ Next      |
-| 10    | Page Serialization                                    | ⏳ Pending   |
+| 9     | Document Assembly & Ordering                          | ✅ Complete  |
+| 10    | Page Serialization                                    | ⏳ Next      |
 | 11    | Final Submission                                      | ⏳ Pending   |
 | 12    | WhatsApp Alerts                                       | ⏳ Pending   |
 | 13    | Past Tenders & Audit Archive                          | ⏳ Pending   |

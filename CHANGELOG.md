@@ -488,6 +488,44 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 ---
 
+## Phase 9 — Document Assembly & Ordering ✅
+**Date completed:** 2026-08-06
+
+### What was built
+
+#### Backend
+- **`backend/models/ChecklistItem.js`** — added `assembly_order` INTEGER field to track custom document ordering (separate from the original `order_index` used for checklist display).
+- **`backend/routes/assembly.js`** — new route module with three endpoints:
+  - `GET /api/tenders/:id/assembly` — returns approved checklist items sorted by `assembly_order` (or fallback to `order_index`), with document paths and names.
+  - `PUT /api/tenders/:id/assembly/order` — accepts a reordered list of checklist item IDs, updates `assembly_order` for each, and returns the new order.
+  - `POST /api/tenders/:id/assembly/toc` — generates a PDF Table of Contents with document names, form references, start pages, and page counts; saves to `uploads/assembly/` and returns the file path.
+- **`backend/index.js`** — imported and mounted assembly routes under `/api/tenders`.
+
+#### Frontend
+- **`frontend/src/components/AssemblyPanel.jsx`** — new React component for document assembly:
+  - Fetches approved checklist items in current assembly order.
+  - Drag-and-drop reordering with visual feedback (drag handles, drop zones).
+  - Up/Down buttons for keyboard-friendly reordering.
+  - "Save Order" button sends new order to backend and refreshes the list.
+  - "Generate Table of Contents" button calls backend TOC generation and displays a preview link.
+  - File-name preview showing how documents will be named based on the new order.
+  - Role-based access: FL, INFO, ADMIN can reorder; others see read-only view.
+- **`frontend/src/pages/TenderDetailPage.jsx`** — integrated `AssemblyPanel` below `ChecklistPanel` when tender status is `DOCUMENT_GATHERING`, `ASSEMBLY`, or `SUBMITTED`.
+
+### Behaviour notes
+- Assembly order is independent of checklist order (`order_index`). Reordering documents does not affect the checklist display.
+- The TOC PDF includes document names, form references, start pages, and cumulative page counts.
+- Only approved checklist items appear in the assembly panel; pending, in-progress, uploaded, or rejected items are excluded.
+- Reordering is a soft operation — no documents are moved or renamed until final submission (Phase 11).
+
+### Decisions made
+- **Separate `assembly_order` field** — keeps document assembly order independent from checklist order, allowing flexible reordering without affecting the checklist UI.
+- **Fallback to `order_index`** — if `assembly_order` is null, the API sorts by the original checklist order, ensuring backward compatibility.
+- **TOC generation in backend** — pdf-lib handles PDF creation server-side, avoiding client-side complexity and ensuring consistent output.
+- **Drag-and-drop UI** — provides intuitive reordering with visual feedback; up/down buttons offer keyboard-friendly alternative.
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts
@@ -529,8 +567,8 @@ docker compose exec backend npm run setup
 | 6     | Company Documents, Profile & My Documents             | ✅ Complete  | Company profile, reusable company docs, personal uploads, task inbox                 |
 | 7     | Form Filling Engine                                   | ✅ Complete  | Overlay editor, auto-fill from profile, flattened PDF output, tender page extraction |
 | 8     | Signatures & Stamps                                   | ✅ Complete  | Drag-and-place CEO/Director signatures + stamp, flatten + immutable audit log        |
-| 9     | Document Assembly & Ordering                          | ⏳ Next      | Drag-and-drop reorder, auto Table of Contents                                        |
-| 10    | Page Serialization                                    | ⏳ Pending   | 6-digit page stamp, physical-submission toggle                                       |
+| 9     | Document Assembly & Ordering                          | ✅ Complete  | Drag-and-drop reorder, auto Table of Contents                                        |
+| 10    | Page Serialization                                    | ⏳ Next      | 6-digit page stamp, physical-submission toggle                                       |
 | 11    | Final Submission                                      | ⏳ Pending   | Merge to PDF (physical) or named ZIP (digital), immutable record                     |
 | 12    | WhatsApp Alerts                                       | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell                            |
 | 13    | Past Tenders & Archive                                | ⏳ Pending   | Searchable archive, full audit log view                                              |
@@ -548,7 +586,7 @@ Following the spec strictly, the next phase to implement is **Phase 9 — Docume
 - **Phase 14 — Polish & Hardening**: error boundaries, mobile responsiveness pass, security hardening, load testing, and deployment checklist.
 
 ### Immediate next actionable step
-Start **Phase 9** by adding drag-and-drop reordering (FL/INFO, no lock) of approved checklist documents and an auto-generated Table of Contents.
+Start **Phase 10** by adding 6-digit Bates-style page stamps and a physical/digital submission mode toggle.
 
 ### Before testing Phase 8
 No CEO/Director signature or company stamp PNG assets exist yet in `company_documents`. Upload them via the **Company Documents** tab (types: "CEO Signature", "Director Signature", "Company Stamp") before opening the Sign & Stamp workspace on a flattened form.
