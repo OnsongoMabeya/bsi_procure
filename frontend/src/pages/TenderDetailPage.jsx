@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ChecklistPanel from '../components/ChecklistPanel';
+import AssemblyPanel from '../components/AssemblyPanel';
 import { useAuth } from '../context/AuthContext';
 
 const CAN_APPROVE = ['GM', 'HOT'];
@@ -307,10 +308,16 @@ export default function TenderDetailPage() {
       </div>
 
       {['DOCUMENT_GATHERING', 'ASSEMBLY', 'SUBMITTED'].includes(tender.status) && (
-        <ChecklistPanel
-          tender={tender}
-          onTenderUpdate={(updated) => setTender(updated)}
-        />
+        <>
+          <ChecklistPanel
+            tender={tender}
+            onTenderUpdate={(updated) => setTender(updated)}
+          />
+          <AssemblyPanel
+            tender={tender}
+            onTenderUpdate={(updated) => setTender(updated)}
+          />
+        </>
       )}
     </Layout>
   );

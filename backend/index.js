@@ -13,6 +13,7 @@ import myDocumentsRoutes from './routes/myDocuments.js';
 import formsRoutes from './routes/forms.js';
 import aiRoutes from './routes/ai.js';
 import auditLogRoutes from './routes/auditLog.js';
+import assemblyRoutes from './routes/assembly.js';
 import User from './models/User.js';
 import Tender from './models/Tender.js';
 import ChecklistItem from './models/ChecklistItem.js';
@@ -71,6 +72,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tenders', tenderRoutes);
+app.use('/api/tenders', assemblyRoutes);
 app.use('/api/company-profile', companyProfileRoutes);
 app.use('/api/company-documents', companyDocumentsRoutes);
 app.use('/api/my-documents', myDocumentsRoutes);

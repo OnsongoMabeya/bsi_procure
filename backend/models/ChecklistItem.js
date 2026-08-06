@@ -69,6 +69,10 @@ const ChecklistItem = sequelize.define('ChecklistItem', {
     type: DataTypes.INTEGER.UNSIGNED,
     defaultValue: 0,
   },
+  assembly_order: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: true,
+  },
 }, {
   tableName: 'checklist_items',
   underscored: true,
