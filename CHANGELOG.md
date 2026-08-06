@@ -576,9 +576,8 @@ docker compose exec backend npm run setup
 
 ## What's next (roadmap)
 
-Following the spec strictly, the next phase to implement is **Phase 9 — Document Assembly & Ordering**. The remaining pipeline is:
+Following the spec strictly, the next phase to implement is **Phase 10 — Page Serialization**. The remaining pipeline is:
 
-- **Phase 9 — Document Assembly & Ordering**: drag-and-drop ordering of checklist outputs, auto-generated Table of Contents, section cover pages.
 - **Phase 10 — Page Serialization**: 6-digit Bates-style page stamps, physical/digital submission mode toggle.
 - **Phase 11 — Final Submission**: merge all assembled documents into a single PDF (physical) or named ZIP (digital), create immutable submission record.
 - **Phase 12 — WhatsApp Alerts**: Meta Cloud API integration, deadline/escalation cron, in-app notification bell.
