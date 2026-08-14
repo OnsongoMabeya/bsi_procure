@@ -526,6 +526,49 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 ---
 
+## Phase 10 — Page Serialization ✅
+**Date completed:** 2026-08-14
+
+### What was built
+
+#### Backend
+- **`backend/models/Tender.js`** — added three new fields:
+  - `submission_mode` (ENUM: 'physical', 'digital', 'both') — user's choice for submission format
+  - `serialization_status` (ENUM: 'pending', 'in_progress', 'completed') — tracks page stamping progress
+  - `serialized_at` (DATE) — timestamp when serialization was completed
+- **`backend/models/ChecklistItem.js`** — added two new fields:
+  - `serialized_document_path` — path to the stamped PDF
+  - `serialized_document_name` — filename of the stamped PDF
+- **`backend/routes/assembly.js`** — added two new endpoints:
+  - `POST /api/tenders/:id/serialization/serialize` — stamps all approved documents with 6-digit Bates page numbers (000001, 000002, etc.) in assembly order; saves stamped PDFs to `uploads/serialized/`; updates Tender status and ChecklistItem paths
+  - `GET /api/tenders/:id/serialization/status` — returns current serialization status, submission mode, and count of serialized documents
+
+#### Frontend
+- **`frontend/src/components/SerializationPanel.jsx`** — new React component for page serialization:
+  - Dropdown to select submission mode (physical, digital, or both)
+  - "Serialize & Stamp Pages" button (FL/INFO/ADMIN only) that triggers backend stamping
+  - Displays serialization status with progress (e.g., "3 / 5 documents serialized")
+  - Shows page ranges for each stamped document (e.g., "Pages 000001 – 000005")
+  - Read-only view for non-authorized roles
+  - Success message when all documents are stamped
+- **`frontend/src/pages/TenderDetailPage.jsx`** — integrated `SerializationPanel` below `AssemblyPanel` when tender status is `ASSEMBLY` or `SUBMITTED`
+
+### Behaviour notes
+- Bates page numbers are 6-digit, zero-padded (000001, 000002, etc.) and placed in the bottom-right corner of each page in gray text.
+- Serialization is sequential: each document's pages are numbered consecutively based on assembly order.
+- Submission mode selection is locked once serialization is complete.
+- Stamped PDFs are stored separately from originals in `uploads/serialized/` to preserve the originals.
+- Only approved checklist items are serialized; pending, in-progress, uploaded, or rejected items are skipped.
+
+### Decisions made
+- **6-digit Bates format** — zero-padded to 6 digits (000001–999999) to support large tenders with many pages.
+- **Submission mode as a tender property** — allows flexibility for different submission channels (physical, digital, or both) to be handled in Phase 11 (Final Submission).
+- **Separate serialized paths** — preserves original documents and allows re-serialization if needed.
+- **Page stamping in backend** — pdf-lib handles stamping server-side for consistency and to avoid client-side complexity.
+- **Serialization status tracking** — allows users to see progress and prevents accidental re-serialization.
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts
@@ -568,24 +611,23 @@ docker compose exec backend npm run setup
 | 7     | Form Filling Engine                                   | ✅ Complete  | Overlay editor, auto-fill from profile, flattened PDF output, tender page extraction |
 | 8     | Signatures & Stamps                                   | ✅ Complete  | Drag-and-place CEO/Director signatures + stamp, flatten + immutable audit log        |
 | 9     | Document Assembly & Ordering                          | ✅ Complete  | Drag-and-drop reorder, auto Table of Contents                                        |
-| 10    | Page Serialization                                    | ⏳ Next      | 6-digit page stamp, physical-submission toggle                                       |
-| 11    | Final Submission                                      | ⏳ Pending   | Merge to PDF (physical) or named ZIP (digital), immutable record                     |
+| 10    | Page Serialization                                    | ✅ Complete  | 6-digit page stamp, physical-submission toggle                                       |
+| 11    | Final Submission                                      | ⏳ Next      | Merge to PDF (physical) or named ZIP (digital), immutable record                     |
 | 12    | WhatsApp Alerts                                       | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell                            |
 | 13    | Past Tenders & Archive                                | ⏳ Pending   | Searchable archive, full audit log view                                              |
 | 14    | Polish & Hardening                                    | ⏳ Pending   | Error handling, mobile responsiveness, security review                               |
 
 ## What's next (roadmap)
 
-Following the spec strictly, the next phase to implement is **Phase 10 — Page Serialization**. The remaining pipeline is:
+Following the spec strictly, the next phase to implement is **Phase 11 — Final Submission**. The remaining pipeline is:
 
-- **Phase 10 — Page Serialization**: 6-digit Bates-style page stamps, physical/digital submission mode toggle.
-- **Phase 11 — Final Submission**: merge all assembled documents into a single PDF (physical) or named ZIP (digital), create immutable submission record.
+- **Phase 11 — Final Submission**: merge all serialized documents into a single PDF (physical) or named ZIP (digital), create immutable submission record.
 - **Phase 12 — WhatsApp Alerts**: Meta Cloud API integration, deadline/escalation cron, in-app notification bell.
 - **Phase 13 — Past Tenders & Audit Archive**: searchable archive of completed tenders, full audit log viewer (the `GET /api/audit-log` endpoint already exists from Phase 8; this phase builds the browsing UI).
 - **Phase 14 — Polish & Hardening**: error boundaries, mobile responsiveness pass, security hardening, load testing, and deployment checklist.
 
 ### Immediate next actionable step
-Start **Phase 10** by adding 6-digit Bates-style page stamps and a physical/digital submission mode toggle.
+Start **Phase 11** by merging serialized documents into a single PDF (physical) or named ZIP (digital) and creating an immutable submission record.
 
 ### Before testing Phase 8
 No CEO/Director signature or company stamp PNG assets exist yet in `company_documents`. Upload them via the **Company Documents** tab (types: "CEO Signature", "Director Signature", "Company Stamp") before opening the Sign & Stamp workspace on a flattened form.

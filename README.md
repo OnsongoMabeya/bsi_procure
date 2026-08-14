@@ -124,19 +124,20 @@ LLM_API_KEY=your-gemini-key-here
 
 The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept local-only, not pushed to GitHub).
 
-### Phase 9 highlights (just completed)
-- Drag-and-drop reordering of approved checklist documents (FL/INFO/ADMIN can reorder; others see read-only view).
-- Auto-generated Table of Contents PDF with document names, form references, start pages, and page counts.
-- File-name preview showing how documents will be named based on the new assembly order.
-- Assembly order is independent of checklist order — reordering documents does not affect the checklist display.
-- Up/Down buttons provide keyboard-friendly reordering as an alternative to drag-and-drop.
+### Phase 10 highlights (just completed)
+- 6-digit Bates page stamping (000001, 000002, etc.) on all approved documents in assembly order.
+- Submission mode selection (physical, digital, or both) for flexible submission channels.
+- Serialization status tracking with progress display (e.g., "3 / 5 documents serialized").
+- Page ranges shown for each stamped document (e.g., "Pages 000001 – 000005").
+- Stamped PDFs stored separately from originals to preserve originals for re-serialization if needed.
 
 ### Previous phases
+- **Phase 9 — Document Assembly & Ordering**: Drag-and-drop reordering of approved documents, auto-generated Table of Contents.
 - **Phase 8 — Signatures & Stamps**: Sign & Stamp workspace in the form editor with drag-and-place CEO/Director signatures and Company Stamp assets, immutable audit log.
 - **Reselect Pages** (post-Phase-8 enhancement): a form's extracted page range can be changed after the fact via the "Reselect Pages" button in the form editor toolbar.
 
 ### Next phase
-**Phase 10 — Page Serialization** is next: 6-digit Bates-style page stamps and a physical/digital submission mode toggle.
+**Phase 11 — Final Submission** is next: merge serialized documents into a single PDF (physical) or named ZIP (digital), create immutable submission record.
 
 | Phase | Name                                                  | Status       |
 |-------|-------------------------------------------------------|--------------|
@@ -150,8 +151,8 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 | 7     | Form Filling Engine                                   | ✅ Complete  |
 | 8     | Signatures & Stamps                                   | ✅ Complete  |
 | 9     | Document Assembly & Ordering                          | ✅ Complete  |
-| 10    | Page Serialization                                    | ⏳ Next      |
-| 11    | Final Submission                                      | ⏳ Pending   |
+| 10    | Page Serialization                                    | ✅ Complete  |
+| 11    | Final Submission                                      | ⏳ Next      |
 | 12    | WhatsApp Alerts                                       | ⏳ Pending   |
 | 13    | Past Tenders & Audit Archive                          | ⏳ Pending   |
 | 14    | Polish & Hardening                                    | ⏳ Pending   |
