@@ -9,6 +9,7 @@ import Tender from '../models/Tender.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const assemblyDir = path.join(__dirname, '..', 'uploads', 'assembly');
+const serializationDir = path.join(__dirname, '..', 'uploads', 'serialized');
 const router = Router();
 
 router.use(authMiddleware);
@@ -204,6 +205,131 @@ router.post('/:id/assembly/toc', requireRole(...ORDER_ROLES), async (req, res) =
       toc_path: webPath(outputPath),
       entries,
       total_pages: nextPage - 1,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Helper: Stamp PDF pages with 6-digit Bates numbers ────────────────────────
+async function stampPdfPages(pdfBytes, startPageNum) {
+  const pdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const pageCount = pdf.getPageCount();
+  const gray = rgb(0.4, 0.4, 0.4);
+
+  for (let i = 0; i < pageCount; i++) {
+    const page = pdf.getPage(i);
+    const { width, height } = page.getSize();
+    const pageNum = String(startPageNum + i).padStart(6, '0');
+    const fontSize = 10;
+    const textWidth = font.widthOfTextAtSize(pageNum, fontSize);
+    const x = width - 50;
+    const y = 20;
+
+    page.drawText(pageNum, {
+      x,
+      y,
+      size: fontSize,
+      font,
+      color: gray,
+    });
+  }
+
+  return await pdf.save();
+}
+
+// ── Serialize & stamp pages (FL/INFO/ADMIN) ──────────────────────────────────
+router.post('/:id/serialization/serialize', requireRole(...ORDER_ROLES), async (req, res) => {
+  try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) return res.status(404).json({ error: 'Tender not found' });
+
+    const { submission_mode } = req.body;
+    if (!['physical', 'digital', 'both'].includes(submission_mode)) {
+      return res.status(400).json({ error: 'submission_mode must be physical, digital, or both' });
+    }
+
+    const items = await getOrderedItems(tender.id);
+    if (items.length === 0) return res.status(400).json({ error: 'No approved documents to serialize' });
+
+    await tender.update({ serialization_status: 'in_progress', submission_mode });
+
+    let currentPageNum = 1;
+    const serializedDocs = [];
+
+    for (const item of items) {
+      if (!item.uploaded_document_path) continue;
+
+      try {
+        const docPath = path.join(__dirname, '..', item.uploaded_document_path);
+        const docBytes = await fs.readFile(docPath);
+        const stampedBytes = await stampPdfPages(docBytes, currentPageNum);
+
+        const pageCount = await pdfPageCount(item.uploaded_document_path);
+        const effectivePages = pageCount || 1;
+
+        await fs.mkdir(serializationDir, { recursive: true });
+        const outputName = `serialized_${item.id}_${Date.now()}.pdf`;
+        const outputPath = path.join(serializationDir, outputName);
+        await fs.writeFile(outputPath, stampedBytes);
+
+        await ChecklistItem.update(
+          {
+            serialized_document_path: outputPath.replace(__dirname + '/..', ''),
+            serialized_document_name: outputName,
+          },
+          { where: { id: item.id } }
+        );
+
+        serializedDocs.push({
+          id: item.id,
+          name: item.name,
+          start_page: currentPageNum,
+          end_page: currentPageNum + effectivePages - 1,
+          page_count: effectivePages,
+          serialized_path: webPath(outputPath),
+        });
+
+        currentPageNum += effectivePages;
+      } catch (err) {
+        console.error(`Error serializing item ${item.id}:`, err.message);
+      }
+    }
+
+    await tender.update({
+      serialization_status: 'completed',
+      serialized_at: new Date(),
+    });
+
+    res.json({
+      message: 'Documents serialized and stamped',
+      submission_mode,
+      total_pages: currentPageNum - 1,
+      documents: serializedDocs,
+    });
+  } catch (err) {
+    await Tender.update({ serialization_status: 'pending' }, { where: { id: req.params.id } });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Get serialization status ──────────────────────────────────────────────────
+router.get('/:id/serialization/status', async (req, res) => {
+  try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) return res.status(404).json({ error: 'Tender not found' });
+
+    const items = await getOrderedItems(tender.id);
+    const serialized = items.filter((i) => i.serialized_document_path);
+
+    res.json({
+      submission_mode: tender.submission_mode,
+      serialization_status: tender.serialization_status,
+      serialized_at: tender.serialized_at,
+      total_approved: items.length,
+      serialized_count: serialized.length,
+      is_complete: serialized.length === items.length && items.length > 0,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

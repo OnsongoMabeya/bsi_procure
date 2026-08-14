@@ -72,6 +72,18 @@ const Tender = sequelize.define('Tender', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  submission_mode: {
+    type: DataTypes.ENUM('physical', 'digital', 'both'),
+    allowNull: true,
+  },
+  serialization_status: {
+    type: DataTypes.ENUM('pending', 'in_progress', 'completed'),
+    defaultValue: 'pending',
+  },
+  serialized_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   is_archived: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,

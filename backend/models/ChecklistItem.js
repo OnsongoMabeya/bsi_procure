@@ -73,6 +73,14 @@ const ChecklistItem = sequelize.define('ChecklistItem', {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,
   },
+  serialized_document_path: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+  },
+  serialized_document_name: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
 }, {
   tableName: 'checklist_items',
   underscored: true,

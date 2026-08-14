@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ChecklistPanel from '../components/ChecklistPanel';
 import AssemblyPanel from '../components/AssemblyPanel';
+import SerializationPanel from '../components/SerializationPanel';
 import { useAuth } from '../context/AuthContext';
 
 const CAN_APPROVE = ['GM', 'HOT'];
@@ -317,6 +318,12 @@ export default function TenderDetailPage() {
             tender={tender}
             onTenderUpdate={(updated) => setTender(updated)}
           />
+          {['ASSEMBLY', 'SUBMITTED'].includes(tender.status) && (
+            <SerializationPanel
+              tender={tender}
+              onTenderUpdate={(updated) => setTender(updated)}
+            />
+          )}
         </>
       )}
     </Layout>
