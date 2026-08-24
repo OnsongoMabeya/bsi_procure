@@ -139,23 +139,23 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 ### Next phase
 **Phase 11 — Final Submission** is next: merge serialized documents into a single PDF (physical) or named ZIP (digital), create immutable submission record.
 
-| Phase | Name                                                  | Status       |
-|-------|-------------------------------------------------------|--------------|
-| 0     | Scaffolding                                           | ✅ Complete  |
-| 1     | Auth & Roles                                          | ✅ Complete  |
-| 2     | Core Layout & Navigation                              | ✅ Complete  |
-| 3     | Tender Intake & Feasibility                           | ✅ Complete  |
-| 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  |
-| 5     | Document Gathering & My Tasks                         | ✅ Complete  |
-| 6     | Company Documents, Profile & My Documents             | ✅ Complete  |
-| 7     | Form Filling Engine                                   | ✅ Complete  |
-| 8     | Signatures & Stamps                                   | ✅ Complete  |
-| 9     | Document Assembly & Ordering                          | ✅ Complete  |
-| 10    | Page Serialization                                    | ✅ Complete  |
-| 11    | Final Submission                                      | ⏳ Next      |
-| 12    | WhatsApp Alerts                                       | ⏳ Pending   |
-| 13    | Past Tenders & Audit Archive                          | ⏳ Pending   |
-| 14    | Polish & Hardening                                    | ⏳ Pending   |
+| Phase | Name                                                  | Implementation | Testing     |
+|-------|-------------------------------------------------------|----------------|-------------|
+| 0     | Scaffolding                                           | ✅ Complete    | ✅ Complete |
+| 1     | Auth & Roles                                          | ✅ Complete    | ✅ Complete |
+| 2     | Core Layout & Navigation                              | ✅ Complete    | ✅ Complete |
+| 3     | Tender Intake & Feasibility                           | ✅ Complete    | ✅ Complete |
+| 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete    | ✅ Complete |
+| 5     | Document Gathering & My Tasks                         | ✅ Complete    | ✅ Complete |
+| 6     | Company Documents, Profile & My Documents             | ✅ Complete    | ✅ Complete |
+| 7     | Form Filling Engine                                   | ✅ Complete    | ✅ Complete |
+| 8     | Signatures & Stamps                                   | ✅ Complete    | ✅ Complete |
+| 9     | Document Assembly & Ordering                          | ✅ Complete    | ✅ Complete |
+| 10    | Page Serialization                                    | ✅ Complete    | ⏳ Ready    |
+| 11    | Final Submission                                      | ⏳ Next        | ⏳ Pending  |
+| 12    | WhatsApp Alerts                                       | ⏳ Pending     | ⏳ Pending  |
+| 13    | Past Tenders & Audit Archive                          | ⏳ Pending     | ⏳ Pending  |
+| 14    | Polish & Hardening                                    | ⏳ Pending     | ⏳ Pending  |
 
 ## Environment variables
 
@@ -166,3 +166,5 @@ Copy `.env.example` to `.env` and fill in the real values for:
 - LLM provider key (`LLM_API_KEY`)
 - Meta WhatsApp token (`META_API_TOKEN`, etc.)
 - SMTP credentials
+
+<!-- CHECKPOINT id="ckpt_mt6xlv1o_0dqn9a" time="2026-08-24T07:45:42.252Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
