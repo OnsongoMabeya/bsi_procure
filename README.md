@@ -166,5 +166,3 @@ Copy `.env.example` to `.env` and fill in the real values for:
 - LLM provider key (`LLM_API_KEY`)
 - Meta WhatsApp token (`META_API_TOKEN`, etc.)
 - SMTP credentials
-
-<!-- CHECKPOINT id="ckpt_mt6xlv1o_0dqn9a" time="2026-08-24T07:45:42.252Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
