@@ -14,6 +14,7 @@ import formsRoutes from './routes/forms.js';
 import aiRoutes from './routes/ai.js';
 import auditLogRoutes from './routes/auditLog.js';
 import assemblyRoutes from './routes/assembly.js';
+import submissionRoutes from './routes/submission.js';
 import User from './models/User.js';
 import Tender from './models/Tender.js';
 import ChecklistItem from './models/ChecklistItem.js';
@@ -25,6 +26,7 @@ import CompanyDocumentVersion from './models/CompanyDocumentVersion.js';
 import UserDocument from './models/UserDocument.js';
 import FormTemplate from './models/FormTemplate.js';
 import AuditLog from './models/AuditLog.js';
+import Submission from './models/Submission.js';
 
 User.hasMany(Tender, { foreignKey: 'uploaded_by', as: 'createdTenders' });
 Tender.belongsTo(User, { foreignKey: 'uploaded_by', as: 'creator' });
@@ -50,6 +52,10 @@ FormTemplate.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 User.hasMany(AuditLog, { foreignKey: 'user_id', as: 'auditLogs' });
 AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+Tender.hasMany(Submission, { foreignKey: 'tender_id', as: 'submissions' });
+Submission.belongsTo(Tender, { foreignKey: 'tender_id', as: 'tender' });
+Submission.belongsTo(User, { foreignKey: 'submitted_by', as: 'submitter' });
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
 
@@ -73,12 +79,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tenders', tenderRoutes);
 app.use('/api/tenders', assemblyRoutes);
+app.use('/api/tenders', submissionRoutes);
 app.use('/api/company-profile', companyProfileRoutes);
 app.use('/api/company-documents', companyDocumentsRoutes);
 app.use('/api/my-documents', myDocumentsRoutes);
 app.use('/api/forms', formsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/audit-log', auditLogRoutes);
+app.use('/api/submissions', submissionRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 sequelize.sync({ alter: true })
