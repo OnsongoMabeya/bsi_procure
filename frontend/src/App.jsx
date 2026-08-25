@@ -9,6 +9,7 @@ import TenderDetailPage from './pages/TenderDetailPage';
 import DocumentLibraryPage from './pages/DocumentLibraryPage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import CompanyDocumentsPage from './pages/CompanyDocumentsPage';
+import SubmissionsPage from './pages/SubmissionsPage';
 import PastTendersPage from './pages/PastTendersPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
@@ -42,6 +43,9 @@ export default function App() {
           } />
           <Route path="/company-documents" element={
             <ProtectedRoute roles={['ADMIN','FL','INFO']}><CompanyDocumentsPage /></ProtectedRoute>
+          } />
+          <Route path="/submissions" element={
+            <ProtectedRoute roles={['FL','INFO','ADMIN']}><SubmissionsPage /></ProtectedRoute>
           } />
           <Route path="/past-tenders" element={
             <ProtectedRoute roles={ALL_ROLES}><PastTendersPage /></ProtectedRoute>

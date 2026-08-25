@@ -39,6 +39,12 @@ const NAV = [
     roles: ['ADMIN', 'FL', 'INFO'],
   },
   {
+    label: 'Submissions',
+    path: '/submissions',
+    icon: '📤',
+    roles: ['FL', 'INFO', 'ADMIN'],
+  },
+  {
     label: 'Past Tenders',
     path: '/past-tenders',
     icon: '🕒',
