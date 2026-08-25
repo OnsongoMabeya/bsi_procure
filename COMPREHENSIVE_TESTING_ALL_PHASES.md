@@ -14,7 +14,7 @@ node scripts/test-all-phases.js
 ```
 
 Expected output:
-```
+```text
 ╔════════════════════════════════════════════════════════════╗
 ║  COMPREHENSIVE TEST SUITE — ALL PHASES (0-11)              ║
 ╚════════════════════════════════════════════════════════════╝
@@ -74,8 +74,8 @@ curl -X POST http://localhost:5005/api/auth/login \
 ```
 
 **Manual Test:**
-1. Open http://localhost:5173
-2. Login with: admin@bsint.net / admin
+1. Open <http://localhost:5173> in browser
+2. Login with: `admin@bsint.net` / `admin`
 3. Verify dashboard loads
 4. Check user role badge (top-right)
 5. Logout and login as different role
@@ -518,21 +518,25 @@ docker compose up --build -d
 
 ## Summary
 
-**All Phases (0-11) Tested and Verified! ✅**
+**All Phases (0-11) Tested and Verified!** ✅
 
-| Phase | Feature | Status |
-|-------|---------|--------|
-| 0 | Scaffolding | ✅ Complete |
-| 1 | Auth & Roles | ✅ Complete |
-| 2 | Layout & Navigation | ✅ Complete |
-| 3 | Tender Intake | ✅ Complete |
-| 4 | AI Extraction | ✅ Complete |
-| 5 | Document Gathering | ✅ Complete |
-| 6 | Documents & Profile | ✅ Complete |
-| 7 | Form Filling | ✅ Complete |
-| 8 | Signatures & Stamps | ✅ Complete |
-| 9 | Assembly & Ordering | ✅ Complete |
-| 10 | Page Serialization | ✅ Complete |
-| 11 | Final Submission | ✅ Complete |
+| Phase | Feature             | Status      |
+|-------|---------------------|-------------|
+| 0     | Scaffolding         | ✅ Complete |
+| 1     | Auth & Roles        | ✅ Complete |
+| 2     | Layout & Navigation | ✅ Complete |
+| 3     | Tender Intake       | ✅ Complete |
+| 4     | AI Extraction       | ✅ Complete |
+| 5     | Document Gathering  | ✅ Complete |
+| 6     | Documents & Profile | ✅ Complete |
+| 7     | Form Filling        | ✅ Complete |
+| 8     | Signatures & Stamps | ✅ Complete |
+| 9     | Assembly & Ordering | ✅ Complete |
+| 10    | Page Serialization  | ✅ Complete |
+| 11    | Final Submission    | ✅ Complete |
 
-**Next: Phase 12 — WhatsApp Alerts**
+## Next: Phase 12 — WhatsApp Alerts
+
+<!-- CHECKPOINT id="ckpt_mt8hqg4o_64r6r4" time="2026-08-25T09:56:54.696Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
+
+<!-- CHECKPOINT id="ckpt_mt8i3b3a_lrqdr7" time="2026-08-25T10:06:54.694Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
