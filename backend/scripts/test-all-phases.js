@@ -140,7 +140,7 @@ async function testAllPhases() {
     console.log(`✅ Audit log entries: ${auditLogCount}`);
 
     const auditByAction = await sequelize.query(`
-      SELECT action, COUNT(*) as count FROM audit_logs GROUP BY action LIMIT 10
+      SELECT action, COUNT(*) as count FROM audit_log GROUP BY action LIMIT 10
     `, { type: sequelize.QueryTypes.SELECT });
 
     console.log('✅ Audit log actions:');
