@@ -1,8 +1,13 @@
+import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import User from '../models/User.js';
 import Tender from '../models/Tender.js';
 import ChecklistItem from '../models/ChecklistItem.js';
 import Submission from '../models/Submission.js';
+
+Tender.hasMany(Submission, { foreignKey: 'tender_id', as: 'submissions' });
+Submission.belongsTo(Tender, { foreignKey: 'tender_id', as: 'tender' });
+Submission.belongsTo(User, { foreignKey: 'submitted_by', as: 'submitter' });
 
 async function testPhase11() {
   try {
@@ -97,7 +102,7 @@ async function testPhase11() {
 
     console.log('--- Test 9: Check Checklist Items with Serialized Documents ---');
     const serializedItems = await ChecklistItem.findAll({
-      where: { serialized_document_path: { [sequelize.Op.not]: null } },
+      where: { serialized_document_path: { [Op.not]: null } },
       limit: 5,
     });
     console.log(`✅ Checklist items with serialized documents: ${serializedItems.length}`);
