@@ -124,20 +124,24 @@ LLM_API_KEY=your-gemini-key-here
 
 The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept local-only, not pushed to GitHub).
 
-### Phase 10 highlights (just completed)
-- 6-digit Bates page stamping (000001, 000002, etc.) on all approved documents in assembly order.
-- Submission mode selection (physical, digital, or both) for flexible submission channels.
-- Serialization status tracking with progress display (e.g., "3 / 5 documents serialized").
-- Page ranges shown for each stamped document (e.g., "Pages 000001 – 000005").
-- Stamped PDFs stored separately from originals to preserve originals for re-serialization if needed.
+### Phase 11 highlights (just completed)
+- Merge serialized documents into single PDF (physical submission) or named ZIP archive (digital submission).
+- SubmissionPanel UI for tender detail page with PDF merge and ZIP creation buttons.
+- SubmissionsPage tab for viewing all submissions across all tenders with filtering.
+- Immutable submission records — once marked as submitted, cannot be edited or deleted.
+- Submission method selection: manual upload or email (email sending stubbed for Phase 12).
+- Submission history view showing all previous submissions with details.
+- Role-based access: FL, INFO, ADMIN only.
+- Automated test script verifying all submission functionality.
 
 ### Previous phases
+- **Phase 10 — Page Serialization**: 6-digit Bates page stamping, submission mode selection, serialization status tracking.
 - **Phase 9 — Document Assembly & Ordering**: Drag-and-drop reordering of approved documents, auto-generated Table of Contents.
 - **Phase 8 — Signatures & Stamps**: Sign & Stamp workspace in the form editor with drag-and-place CEO/Director signatures and Company Stamp assets, immutable audit log.
 - **Reselect Pages** (post-Phase-8 enhancement): a form's extracted page range can be changed after the fact via the "Reselect Pages" button in the form editor toolbar.
 
 ### Next phase
-**Phase 11 — Final Submission** is next: merge serialized documents into a single PDF (physical) or named ZIP (digital), create immutable submission record.
+**Phase 12 — WhatsApp Alerts** is next: Meta Cloud API integration, escalation schedule, in-app notification mirror.
 
 | Phase | Name                                                  | Implementation | Testing     |
 |-------|-------------------------------------------------------|----------------|-------------|
@@ -152,8 +156,8 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 | 8     | Signatures & Stamps                                   | ✅ Complete    | ✅ Complete |
 | 9     | Document Assembly & Ordering                          | ✅ Complete    | ✅ Complete |
 | 10    | Page Serialization                                    | ✅ Complete    | ⏳ Ready    |
-| 11    | Final Submission                                      | ⏳ Next        | ⏳ Pending  |
-| 12    | WhatsApp Alerts                                       | ⏳ Pending     | ⏳ Pending  |
+| 11    | Final Submission                                      | ✅ Complete    | ✅ Complete |
+| 12    | WhatsApp Alerts                                       | ⏳ Next        | ⏳ Pending  |
 | 13    | Past Tenders & Audit Archive                          | ⏳ Pending     | ⏳ Pending  |
 | 14    | Polish & Hardening                                    | ⏳ Pending     | ⏳ Pending  |
 
