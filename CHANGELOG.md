@@ -691,6 +691,47 @@ docker compose exec backend npm run setup
 | 13    | Past Tenders & Archive                                | ⏳ Pending   | Searchable archive, full audit log view                                              |
 | 14    | Polish & Hardening                                    | ⏳ Pending   | Error handling, mobile responsiveness, security review                               |
 
+---
+
+## Testing Infrastructure
+
+### Automated Test Suite
+
+**`backend/scripts/test-all-phases.js`** — Comprehensive automated test covering all phases (0-11):
+
+```bash
+cd backend
+node scripts/test-all-phases.js
+```
+
+**Tests include:**
+- Phase 0: Monorepo structure, MySQL connection, API ports
+- Phase 1: All 9 required roles, User model fields (7 fields verified)
+- Phase 2: Sidebar tabs, role-based visibility, BSI brand colors
+- Phase 3: Tender model fields (9 fields), submission types, feasibility tracking
+- Phase 4: ChecklistItem model fields (8 fields), document categories, form vs supporting docs
+- Phase 5: Document assignment, uploads, approvals, status distribution
+- Phase 6: Company Profile, Company Documents, expiry tracking
+- Phase 7: PDF overlay editor, auto-fill, form templates
+- Phase 8: Audit log entries, signature placement actions
+- Phase 9: Assembly order, drag-and-drop, Table of Contents
+- Phase 10: Serialization fields (3 Tender + 2 ChecklistItem), Bates numbering format, status workflow
+- Phase 11: Submission records, immutability, PDF merge, ZIP creation
+
+**Status:** ✅ All tests passing
+
+### Manual Testing Guide
+
+**`COMPREHENSIVE_TESTING_ALL_PHASES.md`** — Complete step-by-step testing guide:
+
+- Phase-by-phase manual UI testing procedures
+- API testing examples with curl
+- Database verification queries
+- Troubleshooting guide
+- Complete test checklist
+
+---
+
 ## What's next (roadmap)
 
 Following the spec strictly, the next phase to implement is **Phase 12 — WhatsApp Alerts**. The remaining pipeline is:
