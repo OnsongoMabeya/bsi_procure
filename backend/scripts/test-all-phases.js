@@ -6,11 +6,14 @@ import ChecklistItem from '../models/ChecklistItem.js';
 import AuditLog from '../models/AuditLog.js';
 import Submission from '../models/Submission.js';
 
+// Setup associations
 Tender.hasMany(Submission, { foreignKey: 'tender_id', as: 'submissions' });
 Submission.belongsTo(Tender, { foreignKey: 'tender_id', as: 'tender' });
 Submission.belongsTo(User, { foreignKey: 'submitted_by', as: 'submitter' });
 User.hasMany(AuditLog, { foreignKey: 'user_id', as: 'auditLogs' });
 AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Tender.hasMany(ChecklistItem, { foreignKey: 'tender_id', as: 'checklistItems' });
+ChecklistItem.belongsTo(Tender, { foreignKey: 'tender_id', as: 'tender' });
 
 async function testAllPhases() {
   try {
@@ -48,6 +51,24 @@ async function testAllPhases() {
     usersByRole.forEach((row) => {
       console.log(`   - ${row.role}: ${row.count} user(s)`);
     });
+
+    // Verify all 9 required roles exist
+    const requiredRoles = ['CEO', 'GM', 'FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN'];
+    const configuredRoles = usersByRole.map(r => r.role);
+    const missingRoles = requiredRoles.filter(r => !configuredRoles.includes(r));
+    if (missingRoles.length === 0) {
+      console.log('✅ All 9 required roles present');
+    } else {
+      console.log(`⚠️  Missing roles: ${missingRoles.join(', ')}`);
+    }
+
+    // Verify User model fields
+    const userFields = await sequelize.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'users' AND TABLE_SCHEMA = DATABASE()
+      AND COLUMN_NAME IN ('id', 'name', 'email', 'password_hash', 'role', 'whatsapp_number', 'is_active')
+    `, { type: sequelize.QueryTypes.SELECT });
+    console.log(`✅ User model has ${userFields.length}/7 required fields`);
     console.log();
 
     // ===== PHASE 2: CORE LAYOUT & NAVIGATION =====
@@ -68,6 +89,14 @@ async function testAllPhases() {
     const tenderCount = await Tender.count();
     console.log(`✅ Tenders table exists with ${tenderCount} tenders`);
 
+    // Verify Tender model fields
+    const tenderFields = await sequelize.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'tenders' AND TABLE_SCHEMA = DATABASE()
+      AND COLUMN_NAME IN ('id', 'name', 'reference_number', 'procuring_entity', 'deadline', 'submission_type', 'status', 'uploaded_document_path', 'uploaded_by')
+    `, { type: sequelize.QueryTypes.SELECT });
+    console.log(`✅ Tender model has ${tenderFields.length}/9 required fields`);
+
     const tendersByStatus = await sequelize.query(`
       SELECT status, COUNT(*) as count FROM tenders GROUP BY status
     `, { type: sequelize.QueryTypes.SELECT });
@@ -76,6 +105,21 @@ async function testAllPhases() {
     tendersByStatus.forEach((row) => {
       console.log(`   - ${row.status}: ${row.count}`);
     });
+
+    // Verify submission types
+    const bySubmissionType = await sequelize.query(`
+      SELECT submission_type, COUNT(*) as count FROM tenders GROUP BY submission_type
+    `, { type: sequelize.QueryTypes.SELECT });
+    console.log('✅ Submission types:');
+    bySubmissionType.forEach((row) => {
+      console.log(`   - ${row.submission_type}: ${row.count}`);
+    });
+
+    // Verify feasibility approval tracking
+    const withFeasibilityApproval = await Tender.count({
+      where: { feasibility_approved_by: { [Op.not]: null } }
+    });
+    console.log(`✅ Tenders with feasibility approval: ${withFeasibilityApproval}`);
     console.log();
 
     // ===== PHASE 4: AI CHECKLIST EXTRACTION =====
@@ -86,6 +130,14 @@ async function testAllPhases() {
     const checklistCount = await ChecklistItem.count();
     console.log(`✅ Checklist items extracted: ${checklistCount}`);
 
+    // Verify ChecklistItem model fields
+    const checklistFields = await sequelize.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'checklist_items' AND TABLE_SCHEMA = DATABASE()
+      AND COLUMN_NAME IN ('id', 'tender_id', 'name', 'category', 'is_form', 'form_reference', 'assigned_to', 'status')
+    `, { type: sequelize.QueryTypes.SELECT });
+    console.log(`✅ ChecklistItem model has ${checklistFields.length}/8 required fields`);
+
     const byCategory = await sequelize.query(`
       SELECT category, COUNT(*) as count FROM checklist_items GROUP BY category
     `, { type: sequelize.QueryTypes.SELECT });
@@ -94,6 +146,11 @@ async function testAllPhases() {
     byCategory.forEach((row) => {
       console.log(`   - ${row.category}: ${row.count}`);
     });
+
+    // Verify form vs supporting documents
+    const formCount = await ChecklistItem.count({ where: { is_form: true } });
+    const supportingCount = await ChecklistItem.count({ where: { is_form: false } });
+    console.log(`✅ Forms to fill: ${formCount}, Supporting documents: ${supportingCount}`);
     console.log();
 
     // ===== PHASE 5: DOCUMENT GATHERING & MY TASKS =====
@@ -109,6 +166,24 @@ async function testAllPhases() {
     byChecklistStatus.forEach((row) => {
       console.log(`   - ${row.status}: ${row.count}`);
     });
+
+    // Verify document assignment
+    const assignedCount = await ChecklistItem.count({
+      where: { assigned_to: { [Op.not]: null } }
+    });
+    console.log(`✅ Assigned checklist items: ${assignedCount}`);
+
+    // Verify uploaded documents
+    const uploadedCount = await ChecklistItem.count({
+      where: { uploaded_document_path: { [Op.not]: null } }
+    });
+    console.log(`✅ Uploaded documents: ${uploadedCount}`);
+
+    // Verify approved documents
+    const approvedCount = await ChecklistItem.count({
+      where: { status: 'APPROVED' }
+    });
+    console.log(`✅ Approved documents: ${approvedCount}`);
     console.log();
 
     // ===== PHASE 6: COMPANY DOCUMENTS & PROFILE =====
@@ -168,23 +243,23 @@ async function testAllPhases() {
     console.log('PHASE 10: PAGE SERIALIZATION');
     console.log('═══════════════════════════════════════════════════════════\n');
 
-    // Test 10.1: Verify Tender model fields
-    const tenderFields = await sequelize.query(`
+    // Test 10.1: Verify Tender serialization fields
+    const tenderSerializationFields = await sequelize.query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_NAME = 'tenders' AND TABLE_SCHEMA = DATABASE()
       AND COLUMN_NAME IN ('submission_mode', 'serialization_status', 'serialized_at')
     `, { type: sequelize.QueryTypes.SELECT });
     
-    console.log(`✅ Tender model has ${tenderFields.length} serialization fields`);
+    console.log(`✅ Tender model has ${tenderSerializationFields.length} serialization fields`);
 
-    // Test 10.2: Verify ChecklistItem fields
-    const itemFields = await sequelize.query(`
+    // Test 10.2: Verify ChecklistItem serialization fields
+    const checklistSerializationFields = await sequelize.query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_NAME = 'checklist_items' AND TABLE_SCHEMA = DATABASE()
       AND COLUMN_NAME IN ('serialized_document_path', 'serialized_document_name')
     `, { type: sequelize.QueryTypes.SELECT });
     
-    console.log(`✅ ChecklistItem model has ${itemFields.length} serialization fields`);
+    console.log(`✅ ChecklistItem model has ${checklistSerializationFields.length} serialization fields`);
 
     // Test 10.3: Check serialization status distribution
     const bySerializationStatus = await sequelize.query(`
@@ -262,12 +337,12 @@ async function testAllPhases() {
     const submissionCount = await Submission.count();
     console.log(`✅ Submission records: ${submissionCount}`);
 
-    const bySubmissionType = await sequelize.query(`
+    const submissionsByType = await sequelize.query(`
       SELECT submission_type, COUNT(*) as count FROM submissions GROUP BY submission_type
     `, { type: sequelize.QueryTypes.SELECT });
 
     console.log('✅ Submission types:');
-    bySubmissionType.forEach((row) => {
+    submissionsByType.forEach((row) => {
       console.log(`   - ${row.submission_type}: ${row.count}`);
     });
 
