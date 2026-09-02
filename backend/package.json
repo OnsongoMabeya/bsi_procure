@@ -21,6 +21,8 @@
     "mammoth": "^1.12.0",
     "multer": "^2.2.0",
     "mysql2": "^3.10.1",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.7",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "1.1.1",
     "sequelize": "^6.37.3",

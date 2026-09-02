@@ -6,6 +6,7 @@ import Tender from '../models/Tender.js';
 import User from '../models/User.js';
 import ChecklistItem from '../models/ChecklistItem.js';
 import { convertDocxToPdf, isDocx } from '../utils/convertDocxToPdf.js';
+import { sendFeasibilityNotification } from '../services/alertService.js';
 
 const VALID_ROLES = ['FL', 'FIN', 'TECH', 'INFO', 'IT', 'HOT', 'ADMIN', 'GM', ''];
 
@@ -268,6 +269,8 @@ router.patch('/:id/feasibility', requireRole(...CAN_APPROVE), async (req, res) =
         rejection_reason: notes,
       });
     }
+
+    sendFeasibilityNotification(tender.id, decision, req.user.id, decision === 'approve' ? notes : '', decision === 'reject' ? notes : '');
 
     const updated = await Tender.findByPk(req.params.id, {
       include: [

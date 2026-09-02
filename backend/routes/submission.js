@@ -8,6 +8,7 @@ import { authMiddleware, requireRole } from '../middleware/auth.js';
 import Tender from '../models/Tender.js';
 import ChecklistItem from '../models/ChecklistItem.js';
 import Submission from '../models/Submission.js';
+import { sendSubmissionNotification } from '../services/alertService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const submissionDir = path.join(__dirname, '..', 'uploads', 'submissions');
@@ -220,6 +221,8 @@ router.post('/:tenderId/submission/mark-submitted', requireRole(...SUBMISSION_RO
     });
 
     await tender.update({ status: 'SUBMITTED' });
+
+    sendSubmissionNotification(tender.id, req.user.id);
 
     res.json({
       message: 'Submission marked successfully',

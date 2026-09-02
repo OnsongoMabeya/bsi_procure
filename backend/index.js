@@ -15,6 +15,8 @@ import aiRoutes from './routes/ai.js';
 import auditLogRoutes from './routes/auditLog.js';
 import assemblyRoutes from './routes/assembly.js';
 import submissionRoutes from './routes/submission.js';
+import notificationRoutes from './routes/notifications.js';
+import { startDeadlineReminderScheduler, startDocumentExpiryScheduler } from './services/alertService.js';
 import User from './models/User.js';
 import Tender from './models/Tender.js';
 import ChecklistItem from './models/ChecklistItem.js';
@@ -27,6 +29,10 @@ import UserDocument from './models/UserDocument.js';
 import FormTemplate from './models/FormTemplate.js';
 import AuditLog from './models/AuditLog.js';
 import Submission from './models/Submission.js';
+import Notification from './models/Notification.js';
+
+User.hasMany(Notification, { foreignKey: 'user_id', as: 'notifications' });
+Notification.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 User.hasMany(Tender, { foreignKey: 'uploaded_by', as: 'createdTenders' });
 Tender.belongsTo(User, { foreignKey: 'uploaded_by', as: 'creator' });
@@ -87,10 +93,15 @@ app.use('/api/forms', formsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/audit-log', auditLogRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 sequelize.sync({ alter: true })
-  .then(() => console.log('Database synced'))
+  .then(() => {
+    console.log('Database synced');
+    startDeadlineReminderScheduler();
+    startDocumentExpiryScheduler();
+  })
   .catch((err) => console.error('DB sync error:', err.message));
 
 app.listen(PORT, () => {

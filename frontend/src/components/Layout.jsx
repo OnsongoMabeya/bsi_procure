@@ -1,4 +1,5 @@
 import Sidebar from './Sidebar';
+import NotificationBell from './NotificationBell';
 
 export default function Layout({ children, title }) {
   return (
@@ -7,6 +8,9 @@ export default function Layout({ children, title }) {
       <div style={styles.main}>
         <header style={styles.topbar}>
           <h1 style={styles.pageTitle}>{title}</h1>
+          <div style={styles.topbarRight}>
+            <NotificationBell />
+          </div>
         </header>
         <main style={styles.content}>
           {children}
@@ -34,10 +38,16 @@ const styles = {
     borderBottom: '1px solid var(--border)',
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: '0 24px',
     position: 'sticky',
     top: 0,
     zIndex: 50,
+  },
+  topbarRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
   },
   pageTitle: {
     fontSize: 16,
