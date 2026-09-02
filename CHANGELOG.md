@@ -673,24 +673,24 @@ docker compose exec backend npm run setup
 
 ## Phase Status Summary
 
-| Phase | Name                                                  | Status       | What it delivered                                                                    |
-| ----- | ----------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------ |
-| 0     | Scaffolding                                           | ✅ Complete  | Monorepo, Express + React + Vite, MySQL, health route                                |
-| 1     | Auth & Roles                                          | ✅ Complete  | JWT login, 9 roles, RBAC middleware, ADMIN user CRUD                                 |
-| 2     | Core Layout & Navigation                              | ✅ Complete  | Sidebar, topbar, 8 placeholder pages, role-filtered nav                              |
-| 3     | Tender Intake & Feasibility                           | ✅ Complete  | `tenders` table, file upload, GM/HOT feasibility approval flow                       |
-| 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  | Gemini + Ollama providers, multi-role assignment, checklist review/edit              |
-| 5     | Document Gathering & My Tasks                         | ✅ Complete  | Checklist item statuses, per-item upload, My Tasks view                              |
-| 6     | Company Documents, Profile & My Documents             | ✅ Complete  | Company profile, reusable company docs, personal uploads, task inbox                 |
-| 7     | Form Filling Engine                                   | ✅ Complete  | Overlay editor, auto-fill from profile, flattened PDF output, tender page extraction |
-| 8     | Signatures & Stamps                                   | ✅ Complete  | Drag-and-place CEO/Director signatures + stamp, flatten + immutable audit log        |
-| 9     | Document Assembly & Ordering                          | ✅ Complete  | Drag-and-drop reorder, auto Table of Contents                                        |
-| 10    | Page Serialization                                    | ✅ Complete  | 6-digit page stamp, physical-submission toggle                                       |
-| 11    | Final Submission                                      | ✅ Complete  | Merge to PDF (physical) or named ZIP (digital), immutable record, SubmissionPanel UI |
+| Phase | Name                                                  | Status       | What it delivered                                                                        |
+| ----- | ----------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
+| 0     | Scaffolding                                           | ✅ Complete  | Monorepo, Express + React + Vite, MySQL, health route                                    |
+| 1     | Auth & Roles                                          | ✅ Complete  | JWT login, 9 roles, RBAC middleware, ADMIN user CRUD                                     |
+| 2     | Core Layout & Navigation                              | ✅ Complete  | Sidebar, topbar, 8 placeholder pages, role-filtered nav                                  |
+| 3     | Tender Intake & Feasibility                           | ✅ Complete  | `tenders` table, file upload, GM/HOT feasibility approval flow                           |
+| 4     | AI Checklist Extraction (Gemini + Ollama, multi-role) | ✅ Complete  | Gemini + Ollama providers, multi-role assignment, checklist review/edit                  |
+| 5     | Document Gathering & My Tasks                         | ✅ Complete  | Checklist item statuses, per-item upload, My Tasks view                                  |
+| 6     | Company Documents, Profile & My Documents             | ✅ Complete  | Company profile, reusable company docs, personal uploads, task inbox                     |
+| 7     | Form Filling Engine                                   | ✅ Complete  | Overlay editor, auto-fill from profile, flattened PDF output, tender page extraction     |
+| 8     | Signatures & Stamps                                   | ✅ Complete  | Drag-and-place CEO/Director signatures + stamp, flatten + immutable audit log            |
+| 9     | Document Assembly & Ordering                          | ✅ Complete  | Drag-and-drop reorder, auto Table of Contents                                            |
+| 10    | Page Serialization                                    | ✅ Complete  | 6-digit page stamp, physical-submission toggle                                           |
+| 11    | Final Submission                                      | ✅ Complete  | Merge to PDF (physical) or named ZIP (digital), immutable record, SubmissionPanel UI     |
 | 12    | Email Alerts                                          | ⏳ Next      | SMTP integration, submission notifications, deadline reminders, in-app notification bell |
-| 13    | Past Tenders & Archive                                | ⏳ Pending   | Searchable archive, full audit log view                                              |
-| 14    | Polish & Hardening                                    | ⏳ Pending   | Error handling, mobile responsiveness, security review                               |
-| 15    | WhatsApp Alerts                                       | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell                            |
+| 13    | Past Tenders & Archive                                | ⏳ Pending   | Searchable archive, full audit log view                                                  |
+| 14    | Polish & Hardening                                    | ⏳ Pending   | Error handling, mobile responsiveness, security review                                   |
+| 15    | WhatsApp Alerts                                       | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell                                |
 
 ---
 
@@ -747,3 +747,5 @@ Start **Phase 12** by integrating SMTP for email alerts with escalation schedule
 
 ### Before testing Phase 8
 No CEO/Director signature or company stamp PNG assets exist yet in `company_documents`. Upload them via the **Company Documents** tab (types: "CEO Signature", "Director Signature", "Company Stamp") before opening the Sign & Stamp workspace on a flattened form.
+
+<!-- CHECKPOINT id="ckpt_mtjwmlcv_gsh2yj" time="2026-09-02T09:39:17.023Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
