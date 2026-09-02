@@ -704,7 +704,7 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
   - `SMTP_PORT` — SMTP port (default 587)
   - `SMTP_USER` — SMTP username/email
   - `SMTP_PASSWORD` — SMTP password or app-specific password
-  - `FROM_EMAIL` — sender email address (default: noreply@bsint.net)
+  - `FROM_EMAIL` — sender email address (default: `noreply@bsint.net`)
 
 #### Testing
 - **`backend/scripts/test-all-phases.js`** updated:
@@ -855,7 +855,3 @@ Start **Phase 13** by building the Past Tenders archive page with searchable/fil
 
 ### Before testing Phase 8
 No CEO/Director signature or company stamp PNG assets exist yet in `company_documents`. Upload them via the **Company Documents** tab (types: "CEO Signature", "Director Signature", "Company Stamp") before opening the Sign & Stamp workspace on a flattened form.
-
-<!-- CHECKPOINT id="ckpt_mtjwmlcv_gsh2yj" time="2026-09-02T09:39:17.023Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
-
-<!-- CHECKPOINT id="ckpt_mtk6xblo_bsuqny" time="2026-09-02T14:27:33.756Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
