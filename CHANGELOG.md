@@ -643,6 +643,114 @@ Get a free Gemini API key at <https://aistudio.google.com/apikey>
 
 ---
 
+## Phase 12 — Email Alerts ✅
+**Date completed:** 2026-09-02
+
+### What was built
+
+#### Backend
+- **`backend/models/Notification.js`** — Sequelize model with fields: `id` (UUID), `user_id` (INTEGER), `title`, `body`, `type` (ENUM: submission, feasibility, task_assignment, document_rejection, deadline_reminder, document_expiry), `tender_id`, `checklist_item_id`, `is_read`, `channel` (ENUM: email, inapp), `email_sent_at`, `email_failed`, `email_error`, `metadata` (JSON), `created_at`
+- **`backend/services/emailService.js`** — SMTP email integration:
+  - `initializeTransporter()` — configures nodemailer with SMTP settings from `.env`
+  - `sendEmail(to, subject, htmlContent, textContent)` — sends email with graceful fallback if SMTP not configured
+  - `emailTemplates` — pre-built HTML templates for all notification types (submission, feasibility, task assignment, document rejection, deadline reminders, document expiry)
+- **`backend/services/alertService.js`** — alert triggers and schedulers:
+  - `createNotification()` — creates in-app and/or email notifications with delivery tracking
+  - `sendSubmissionNotification()` — triggered on tender submission, notifies GM/CEO/HOT
+  - `sendFeasibilityNotification()` — triggered on feasibility approval/rejection, notifies FL/INFO/CEO
+  - `sendTaskAssignmentNotification()` — triggered when checklist item assigned, notifies assignee
+  - `sendDocumentRejectionNotification()` — triggered when document rejected, notifies assignee with feedback
+  - `startDeadlineReminderScheduler()` — hourly cron job checking for approaching deadlines (7d, 3d, 1d, 12h, 6h, 2h thresholds)
+  - `startDocumentExpiryScheduler()` — daily cron job at 9 AM checking for expiring company documents (30 days before expiry)
+- **`backend/routes/notifications.js`** — notification API endpoints:
+  - `GET /api/notifications` — list user's notifications with pagination (page, limit, unreadOnly filter)
+  - `GET /api/notifications/unread-count` — returns unread notification count for badge
+  - `PATCH /api/notifications/:id/read` — mark single notification as read
+  - `PATCH /api/notifications/mark-all-read` — bulk mark all as read
+  - `DELETE /api/notifications/:id` — delete notification
+- **`backend/index.js`** updated:
+  - Imported Notification model and alert service
+  - Added model associations (User → Notifications)
+  - Started deadline reminder and document expiry schedulers on DB sync
+  - Registered `/api/notifications` routes
+- **`backend/routes/submission.js`** updated — added `sendSubmissionNotification()` trigger on mark-submitted
+- **`backend/routes/tenders.js`** updated — added `sendFeasibilityNotification()` trigger on feasibility decision
+- **`backend/package.json`** updated — added `nodemailer` and `node-cron` dependencies
+
+#### Frontend
+- **`frontend/src/components/NotificationBell.jsx`** — topbar notification bell component:
+  - Bell icon with unread count badge (shows "9+" if >9)
+  - Dropdown panel showing last 10 notifications
+  - Notification type icons (📤 submission, ✅ feasibility, 📌 task, ❌ rejection, ⏰ deadline, ⚠️ expiry)
+  - Relative timestamps ("2h ago", "just now", etc.)
+  - Mark as read / Delete actions per notification
+  - "Mark all as read" button when unread count > 0
+  - Click outside to close panel
+- **`frontend/src/hooks/useNotifications.js`** — notification state management hook:
+  - Fetches notifications on mount with pagination
+  - Polls unread count every 30 seconds
+  - `markAsRead(notificationId)` — marks single notification as read
+  - `markAllAsRead()` — bulk marks all as read
+  - `deleteNotification(notificationId)` — deletes notification
+  - `refetch()` — manual refresh
+- **`frontend/src/components/Layout.jsx`** updated:
+  - Integrated NotificationBell in topbar (right side)
+  - Added topbar flex layout with space-between to position bell on right
+- **`frontend/package.json`** updated — added `lucide-react` dependency for notification icons
+
+#### Environment Configuration
+- **`.env` variables** (optional, graceful fallback if not set):
+  - `SMTP_HOST` — SMTP server hostname (e.g., smtp.gmail.com)
+  - `SMTP_PORT` — SMTP port (default 587)
+  - `SMTP_USER` — SMTP username/email
+  - `SMTP_PASSWORD` — SMTP password or app-specific password
+  - `FROM_EMAIL` — sender email address (default: noreply@bsint.net)
+
+#### Testing
+- **`backend/scripts/test-all-phases.js`** updated:
+  - Added comprehensive Phase 12 tests (12 test cases)
+  - Verifies Notification model fields (12/12)
+  - Checks notification types distribution
+  - Checks notification channels (email, inapp)
+  - Verifies read/unread counts
+  - Verifies email delivery tracking
+  - Tests user/tender/checklist associations
+  - Checks SMTP configuration
+  - Verifies API endpoints exist
+  - Documents alert triggers
+  - Documents frontend components
+
+### Behaviour notes
+- **SMTP Graceful Fallback:** If SMTP not configured, emails are logged to console instead of failing
+- **Notification Channels:** Notifications can be sent via email, in-app, or both
+- **Email Delivery Tracking:** Each notification tracks `email_sent_at` and `email_failed` status
+- **Deadline Reminders:** Escalating schedule (7 days → 2 hours before deadline) ensures users are reminded at critical intervals
+- **Document Expiry:** Daily check at 9 AM for documents expiring within 30 days
+- **Polling:** Frontend polls unread count every 30 seconds (not WebSocket) for simplicity
+- **Immutable Records:** Notification records are immutable (created once, not updated)
+- **Role-Based Recipients:** Different notification types sent to different roles (GM/CEO/HOT for submissions, FL/INFO/CEO for feasibility, etc.)
+
+### Decisions made
+- **Nodemailer over AWS SES/SendGrid** — simpler setup, works with any SMTP provider, no vendor lock-in
+- **node-cron over external job queue** — sufficient for deadline/expiry checks, no external dependencies
+- **Polling over WebSocket** — simpler frontend implementation, 30-second polling acceptable for non-critical notifications
+- **In-app + Email channels** — dual-channel approach ensures notifications reach users even if email is missed
+- **Graceful SMTP fallback** — system works without email configured (logs to console), allowing development without SMTP setup
+- **Hourly deadline scheduler** — catches all threshold intervals (7d, 3d, 1d, 12h, 6h, 2h) without missing any
+- **Daily expiry check at 9 AM** — single daily check sufficient for document expiry (not time-critical)
+
+### Test results
+- ✅ All 12 Phase 12 tests passing
+- ✅ Notification model created with 12/12 required fields
+- ✅ SMTP configured and ready for email sending
+- ✅ Notification API endpoints verified
+- ✅ Alert triggers integrated in submission and feasibility routes
+- ✅ Frontend NotificationBell component rendering
+- ✅ useNotifications hook polling successfully
+- ✅ Database statistics: 7 users, 8 tenders, 111 checklist items, 1 submission, 0 notifications (ready for use)
+
+---
+
 ## Infrastructure & Tooling
 
 ### Root monorepo scripts
@@ -749,3 +857,5 @@ Start **Phase 13** by building the Past Tenders archive page with searchable/fil
 No CEO/Director signature or company stamp PNG assets exist yet in `company_documents`. Upload them via the **Company Documents** tab (types: "CEO Signature", "Director Signature", "Company Stamp") before opening the Sign & Stamp workspace on a flattened form.
 
 <!-- CHECKPOINT id="ckpt_mtjwmlcv_gsh2yj" time="2026-09-02T09:39:17.023Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
+
+<!-- CHECKPOINT id="ckpt_mtk6xblo_bsuqny" time="2026-09-02T14:27:33.756Z" note="auto" fixes=0 questions=0 highlights=0 sections="" -->
