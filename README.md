@@ -141,7 +141,7 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 - **Reselect Pages** (post-Phase-8 enhancement): a form's extracted page range can be changed after the fact via the "Reselect Pages" button in the form editor toolbar.
 
 ### Next phase
-**Phase 12 — Email Alerts** is next: SMTP integration for submission notifications and deadline reminders.
+**Phase 13 — Past Tenders & Audit Archive** is next: searchable archive of completed tenders, full audit log viewer.
 
 | Phase | Name                                                  | Implementation | Testing     |
 |-------|-------------------------------------------------------|----------------|-------------|
@@ -157,8 +157,8 @@ The full phase plan lives in `BSI_Implementation_Phasing_Instructions.md` (kept 
 | 9     | Document Assembly & Ordering                          | ✅ Complete    | ✅ Complete |
 | 10    | Page Serialization                                    | ✅ Complete    | ✅ Complete |
 | 11    | Final Submission                                      | ✅ Complete    | ✅ Complete |
-| 12    | Email Alerts                                          | ⏳ Next        | ⏳ Pending  |
-| 13    | Past Tenders & Audit Archive                          | ⏳ Pending     | ⏳ Pending  |
+| 12    | Email Alerts                                          | ✅ Complete    | ✅ Complete |
+| 13    | Past Tenders & Audit Archive                          | ⏳ Next        | ⏳ Pending  |
 | 14    | Polish & Hardening                                    | ⏳ Pending     | ⏳ Pending  |
 | 15    | WhatsApp Alerts                                       | ⏳ Pending     | ⏳ Pending  |
 

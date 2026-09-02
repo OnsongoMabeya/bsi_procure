@@ -687,8 +687,8 @@ docker compose exec backend npm run setup
 | 9     | Document Assembly & Ordering                          | ✅ Complete  | Drag-and-drop reorder, auto Table of Contents                                            |
 | 10    | Page Serialization                                    | ✅ Complete  | 6-digit page stamp, physical-submission toggle                                           |
 | 11    | Final Submission                                      | ✅ Complete  | Merge to PDF (physical) or named ZIP (digital), immutable record, SubmissionPanel UI     |
-| 12    | Email Alerts                                          | ⏳ Next      | SMTP integration, submission notifications, deadline reminders, in-app notification bell |
-| 13    | Past Tenders & Archive                                | ⏳ Pending   | Searchable archive, full audit log view                                                  |
+| 12    | Email Alerts                                          | ✅ Complete  | SMTP integration, submission notifications, deadline reminders, in-app notification bell |
+| 13    | Past Tenders & Archive                                | ⏳ Next      | Searchable archive, full audit log view                                                  |
 | 14    | Polish & Hardening                                    | ⏳ Pending   | Error handling, mobile responsiveness, security review                                   |
 | 15    | WhatsApp Alerts                                       | ⏳ Pending   | Meta Cloud API, escalation cron, in-app notification bell                                |
 
@@ -698,7 +698,7 @@ docker compose exec backend npm run setup
 
 ### Automated Test Suite
 
-**`backend/scripts/test-all-phases.js`** — Comprehensive automated test covering all phases (0-11):
+**`backend/scripts/test-all-phases.js`** — Comprehensive automated test covering all phases (0-12):
 
 ```bash
 cd backend
@@ -718,8 +718,9 @@ node scripts/test-all-phases.js
 - Phase 9: Assembly order, drag-and-drop, Table of Contents
 - Phase 10: Serialization fields (3 Tender + 2 ChecklistItem), Bates numbering format, status workflow
 - Phase 11: Submission records, immutability, PDF merge, ZIP creation
+- Phase 12: Notification model fields (12 fields), SMTP config, email delivery tracking, API endpoints, alert triggers, frontend components
 
-**Status:** ✅ All tests passing
+**Status:** ✅ All tests passing (Phases 0-12)
 
 ### Manual Testing Guide
 
@@ -735,15 +736,14 @@ node scripts/test-all-phases.js
 
 ## What's next (roadmap)
 
-Following the spec strictly, the next phase to implement is **Phase 12 — Email Alerts**. The remaining pipeline is:
+Following the spec strictly, the next phase to implement is **Phase 13 — Past Tenders & Audit Archive**. The remaining pipeline is:
 
-- **Phase 12 — Email Alerts**: SMTP integration for submission notifications, deadline reminders, and in-app notification bell.
 - **Phase 13 — Past Tenders & Audit Archive**: searchable archive of completed tenders, full audit log viewer (the `GET /api/audit-log` endpoint already exists from Phase 8; this phase builds the browsing UI).
 - **Phase 14 — Polish & Hardening**: error boundaries, mobile responsiveness pass, security hardening, load testing, and deployment checklist.
 - **Phase 15 — WhatsApp Alerts**: Meta Cloud API integration, deadline/escalation cron, in-app notification bell.
 
 ### Immediate next actionable step
-Start **Phase 12** by integrating SMTP for email alerts with escalation schedule (7 days → 12 hours before deadline).
+Start **Phase 13** by building the Past Tenders archive page with searchable/filterable tender history and full audit log viewer.
 
 ### Before testing Phase 8
 No CEO/Director signature or company stamp PNG assets exist yet in `company_documents`. Upload them via the **Company Documents** tab (types: "CEO Signature", "Director Signature", "Company Stamp") before opening the Sign & Stamp workspace on a flattened form.
