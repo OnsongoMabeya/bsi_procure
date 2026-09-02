@@ -1,11 +1,13 @@
 import express from 'express';
 import { Op } from 'sequelize';
 import Notification from '../models/Notification.js';
-import { verifyToken } from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.get('/', verifyToken, async (req, res) => {
+router.use(authMiddleware);
+
+router.get('/', async (req, res) => {
   try {
     const { page = 1, limit = 20, unreadOnly = false } = req.query;
     const offset = (page - 1) * limit;
@@ -42,7 +44,7 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-router.get('/unread-count', verifyToken, async (req, res) => {
+router.get('/unread-count', async (req, res) => {
   try {
     const unreadCount = await Notification.count({
       where: { user_id: req.user.id, is_read: false },
@@ -55,7 +57,7 @@ router.get('/unread-count', verifyToken, async (req, res) => {
   }
 });
 
-router.patch('/:id/read', verifyToken, async (req, res) => {
+router.patch('/:id/read', async (req, res) => {
   try {
     const notification = await Notification.findByPk(req.params.id);
 
@@ -76,7 +78,7 @@ router.patch('/:id/read', verifyToken, async (req, res) => {
   }
 });
 
-router.patch('/mark-all-read', verifyToken, async (req, res) => {
+router.patch('/mark-all-read', async (req, res) => {
   try {
     await Notification.update(
       { is_read: true },
@@ -90,7 +92,7 @@ router.patch('/mark-all-read', verifyToken, async (req, res) => {
   }
 });
 
-router.delete('/:id', verifyToken, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const notification = await Notification.findByPk(req.params.id);
 
