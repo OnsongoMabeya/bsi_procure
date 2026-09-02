@@ -6,10 +6,15 @@ const Notification = sequelize.define('Notification', {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
+    allowNull: false,
   },
   user_id: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER.UNSIGNED,
     allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
   },
   title: {
     type: DataTypes.STRING(255),
