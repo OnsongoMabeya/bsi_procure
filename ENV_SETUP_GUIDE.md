@@ -109,13 +109,13 @@ docker-compose up -d
 
 ## Key Differences
 
-| Setting | Development (Local) | Docker Compose |
-|---------|-------------------|-----------------|
-| `DB_HOST` | `localhost` | `mysql` |
-| `LLM_OLLAMA_URL` | `http://host.docker.internal:11434` | `http://ollama:11434` |
-| `NODE_ENV` | `development` | `production` |
-| Database runs in | Docker container (separate) | Docker Compose service |
-| Backend runs in | Local machine | Docker container |
+| Setting          | Development (Local)                 | Docker Compose         |
+|------------------|-------------------------------------|------------------------|
+| `DB_HOST`        | `localhost`                         | `mysql`                |
+| `LLM_OLLAMA_URL` | `http://host.docker.internal:11434` | `http://ollama:11434`  |
+| `NODE_ENV`       | `development`                       | `production`           |
+| Database runs in | Docker container (separate)         | Docker Compose service |
+| Backend runs in  | Local machine                       | Docker container       |
 
 ---
 
